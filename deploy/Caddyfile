@@ -1,0 +1,27 @@
+n8n.drbadr.cloud {
+    reverse_proxy n8n:5678
+}
+
+badrmemory.com, www.badrmemory.com {
+    reverse_proxy 172.17.0.1:3000
+}
+
+http://72.62.132.37 {
+    reverse_proxy 172.17.0.1:8080
+}
+
+www.familycare-ae.com {
+    redir https://familycare-ae.com{uri} permanent
+}
+
+familycare-ae.com {
+    reverse_proxy 172.17.0.1:8080
+}
+
+www.madarorbit.com {
+    redir https://madarorbit.com{uri} permanent
+}
+
+madarorbit.com {
+    reverse_proxy 172.17.0.1:8080
+}

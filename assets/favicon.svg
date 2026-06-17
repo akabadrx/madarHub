@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>Madar Hub Icon</title>
+  <desc>Orbit-inspired Madar Hub icon with letter M.</desc>
+  <defs>
+    <linearGradient id="goldGradient" x1="88" y1="62" x2="428" y2="444" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F1D07A"/>
+      <stop offset="0.55" stop-color="#D6A84F"/>
+      <stop offset="1" stop-color="#C99A3A"/>
+    </linearGradient>
+    <filter id="softShadow" x="-30%" y="-30%" width="160%" height="160%" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="18" stdDeviation="16" flood-color="#071A2D" flood-opacity="0.16"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#softShadow)">
+    <circle cx="256" cy="256" r="208" fill="white"/>
+    <circle cx="256" cy="256" r="206" stroke="#071A2D" stroke-width="12"/>
+
+    <ellipse cx="256" cy="256" rx="236" ry="90" transform="rotate(-25 256 256)" stroke="url(#goldGradient)" stroke-width="22" stroke-linecap="round"/>
+    <ellipse cx="256" cy="256" rx="172" ry="68" transform="rotate(25 256 256)" stroke="#071A2D" stroke-width="10" stroke-linecap="round" opacity="0.28"/>
+
+    <circle cx="456" cy="156" r="26" fill="url(#goldGradient)" stroke="white" stroke-width="10"/>
+
+    <path d="M134 356V164C134 148 146 136 162 136H174C186 136 196 142 202 152L256 252L310 152C316 142 326 136 338 136H350C366 136 378 148 378 164V356"
+          stroke="#071A2D" stroke-width="36" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M164 356V202L244 348C248 356 264 356 268 348L348 202V356"
+          stroke="#D6A84F" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" opacity="0.95"/>
+  </g>
+</svg>
