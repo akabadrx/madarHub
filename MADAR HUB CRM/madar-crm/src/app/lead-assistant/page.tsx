@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { toast } from "sonner";
-import { Bot, Copy, MessageCircle, Loader2, Sparkles, Save, ChevronDown, ChevronUp } from "lucide-react";
+import { Bot, Copy, MessageCircle, Loader2, Sparkles, Save, ChevronDown, ChevronUp, RotateCw, Timer } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
 import { LEAD_TYPES, LEAD_STATUSES, INTERESTS } from "@/lib/constants";
@@ -34,6 +34,7 @@ const INITIAL_STATE: EditableLead = {
   nextAction: "",
   followUpDate: null,
   suggestedReply: "",
+  followUpMessage: "",
   confidenceScore: 0,
   saveSnippet: false,
 };
@@ -82,6 +83,7 @@ export default function LeadAssistantPage() {
   const [saving, setSaving] = useState(false);
   const [result, setResult] = useState<EditableLead | null>(null);
   const [showRaw, setShowRaw] = useState(false);
+  const [regeneratingFollowUp, setRegeneratingFollowUp] = useState(false);
 
   const analyze = useCallback(async () => {
     if (chat.trim().length < 10) {
@@ -133,6 +135,12 @@ export default function LeadAssistantPage() {
       if (result.saveSnippet && chat.trim()) {
         formData.append("rawWhatsappSnippet", chat);
       }
+      if (result.followUpDate) {
+        formData.append("followUpDate", result.followUpDate);
+      }
+      if (result.followUpMessage) {
+        formData.append("followUpMessage", result.followUpMessage);
+      }
       formData.append("aiSummary", `AI: ${result.leadType} | ${result.nextAction}`);
       formData.append("aiConfidence", String(result.confidenceScore));
 
@@ -158,6 +166,32 @@ export default function LeadAssistantPage() {
     navigator.clipboard.writeText(result.suggestedReply);
     toast.success("Reply copied!");
   }, [result]);
+
+  const copyFollowUp = useCallback(() => {
+    if (!result?.followUpMessage) return;
+    navigator.clipboard.writeText(result.followUpMessage);
+    toast.success("Follow-up message copied!");
+  }, [result]);
+
+  const regenerateFollowUp = useCallback(async () => {
+    if (!result || chat.trim().length < 10) return;
+    setRegeneratingFollowUp(true);
+    try {
+      const res = await fetch(basePathUrl("/api/lead-assistant/analyze"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat, followUpDate: result.followUpDate }),
+      });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error || "Regeneration failed");
+      setResult((prev) => prev ? { ...prev, followUpMessage: json.data.followUpMessage } : prev);
+      toast.success("Follow-up message regenerated!");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to regenerate follow-up message.");
+    } finally {
+      setRegeneratingFollowUp(false);
+    }
+  }, [result, chat]);
 
   const update = useCallback(<K extends keyof EditableLead>(key: K, value: EditableLead[K]) => {
     setResult((prev) => prev ? { ...prev, [key]: value } : prev);
@@ -199,6 +233,7 @@ export default function LeadAssistantPage() {
               value={chat}
               onChange={(e) => setChat(e.target.value)}
             />
+            <p className="mt-1 text-xs text-slate-400">Add more conversation bits above and re-analyze to get an updated reply.</p>
             <div className="mt-3 flex flex-wrap gap-2">
               <button className="btn btn-gold min-w-36" onClick={analyze} disabled={loading}>
                 {loading ? <><Loader2 size={18} className="animate-spin" />Analyzing...</> : <><Sparkles size={18} />Re-analyze</>}
@@ -288,6 +323,30 @@ export default function LeadAssistantPage() {
                 <a href={whatsappUrl(result.phone, result.suggestedReply)} target="_blank" rel="noopener noreferrer" className="btn bg-green-600 text-white hover:bg-green-700">
                   <MessageCircle size={16} />Send on WhatsApp
                 </a>
+              )}
+            </div>
+          </div>
+
+          <div className="card p-5">
+            <h3 className="mb-3 flex items-center gap-2 font-bold text-[#0b1f3a]"><Timer size={18} className="text-amber-500" />Follow-up message</h3>
+            <p className="mb-2 text-xs text-slate-400">Generated based on the selected follow-up date. Copy and send when the time comes.</p>
+            <textarea
+              className="field min-h-28 resize-y text-sm leading-6"
+              value={result.followUpMessage}
+              onChange={(e) => update("followUpMessage", e.target.value)}
+            />
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button className="btn btn-outline" type="button" onClick={copyFollowUp}><Copy size={16} />Copy follow-up</button>
+              {result.phone && result.followUpMessage && (
+                <a href={whatsappUrl(result.phone, result.followUpMessage)} target="_blank" rel="noopener noreferrer" className="btn bg-green-600 text-white hover:bg-green-700">
+                  <MessageCircle size={16} />Send on WhatsApp
+                </a>
+              )}
+              {result.followUpDate && (
+                <button className="btn btn-outline border-amber-400 text-amber-600 hover:bg-amber-50" type="button" onClick={regenerateFollowUp} disabled={regeneratingFollowUp}>
+                  {regeneratingFollowUp ? <Loader2 size={16} className="animate-spin" /> : <RotateCw size={16} />}
+                  Regenerate
+                </button>
               )}
             </div>
           </div>

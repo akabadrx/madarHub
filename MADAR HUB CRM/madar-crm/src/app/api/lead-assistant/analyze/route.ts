@@ -24,6 +24,7 @@ const MOCK_RESPONSES: Record<string, Partial<AnalyzeOutput>> = {
     nextAction: "Send a welcome message and ask about their needs.",
     followUpDate: null,
     suggestedReply: "Hi! Welcome to Madar Hub. How can we help you today? Are you looking for a day pass, monthly workspace, or something else?",
+    followUpMessage: "Hi! Just following up on our conversation. Would you like to come visit Madar Hub and see the space? Let me know if you have any questions!",
     confidenceScore: 0.3,
   },
 };
@@ -154,13 +155,32 @@ function buildMockResponse(chat: string): AnalyzeOutput {
     mock.latestMessage = lines[lines.length - 1].trim().slice(0, 200);
   }
 
+  if (mock.leadType === "Day Pass Lead") {
+    mock.followUpMessage = "Hi! I was checking in — did you manage to visit Madar Hub? Our Day Pass is 10,000 RWF and we'd love to host you. Let me know if you have any questions!";
+  } else if (mock.leadType === "Monthly Fixed Desk Lead") {
+    mock.followUpMessage = "Hi! Just following up on our chat about the monthly fixed desk. Would you like to schedule a visit to see the workspace? We can set up a tour at your convenience.";
+  } else if (mock.leadType === "Student Study Lead") {
+    mock.followUpMessage = "Hi! Checking in — are you still interested in the study space? It's 3,000 RWF per day. Let me know which day works for you and I'll save you a spot!";
+  } else if (mock.leadType === "Meeting Room Lead" || mock.leadType === "Training Room Lead") {
+    mock.followUpMessage = "Hi! Following up on your meeting room inquiry. Have you finalized the date and number of attendees? Let me know and I'll confirm availability for you.";
+  } else if (mock.leadType === "Private Office Lead") {
+    mock.followUpMessage = "Hi! Just checking in about the private team room. Would you like to schedule a tour to see the space? Happy to walk you through everything in person.";
+  } else if (mock.leadType === "Location Request") {
+    mock.followUpMessage = "Hi! Did you manage to find us? We're at KG 42 Street, Kimironko, near Four Square Church. Let me know if you'd like to stop by for a visit!";
+  }
+
   return mock;
 }
 
-async function callAI(chat: string): Promise<AnalyzeOutput> {
+async function callAI(chat: string, followUpDate?: string | null): Promise<AnalyzeOutput> {
   const apiKey = process.env.AI_API_KEY;
   if (!apiKey) {
     return buildMockResponse(chat);
+  }
+
+  let userMessage = chat;
+  if (followUpDate) {
+    userMessage = `The user has selected this follow-up date: ${followUpDate}. Generate a follow-up message appropriate for this date.\n\n---\n\n${chat}`;
   }
 
   const baseURL = process.env.AI_BASE_URL || "https://api.openai.com/v1";
@@ -178,7 +198,7 @@ async function callAI(chat: string): Promise<AnalyzeOutput> {
       enable_thinking: false,
       messages: [
         { role: "system", content: AI_SYSTEM_PROMPT },
-        { role: "user", content: chat },
+        { role: "user", content: userMessage },
       ],
     }),
   });
@@ -209,7 +229,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const input = analyzeInputSchema.parse(body);
 
-    const result = await callAI(input.chat);
+    const result = await callAI(input.chat, input.followUpDate);
 
     return NextResponse.json({ success: true, data: result });
   } catch (error) {

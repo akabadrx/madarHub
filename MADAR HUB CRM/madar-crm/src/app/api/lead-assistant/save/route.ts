@@ -13,6 +13,8 @@ const saveLeadSchema = z.object({
   rawWhatsappSnippet: z.string().optional(),
   aiSummary: z.string().optional(),
   aiConfidence: z.string().or(z.number()).optional().transform((v) => v ? Number(v) : null),
+  followUpDate: z.string().nullable().optional(),
+  followUpMessage: z.string().optional(),
 });
 
 export async function POST(request: Request) {
@@ -33,6 +35,7 @@ export async function POST(request: Request) {
         rawWhatsappSnippet: data.rawWhatsappSnippet || null,
         aiSummary: data.aiSummary || null,
         aiConfidence: data.aiConfidence,
+        followUpDate: data.followUpDate ? new Date(data.followUpDate) : null,
       },
     });
 
@@ -43,6 +46,16 @@ export async function POST(request: Request) {
         content: `Lead created via WhatsApp Lead Assistant (AI confidence: ${Math.round((data.aiConfidence || 0) * 100)}%)`,
       },
     });
+
+    if (data.followUpMessage) {
+      await db.interaction.create({
+        data: {
+          leadId: lead.id,
+          type: "note",
+          content: `AI follow-up message: ${data.followUpMessage}`,
+        },
+      });
+    }
 
     revalidatePath("/");
     revalidatePath("/leads");
