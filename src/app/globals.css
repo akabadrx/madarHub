@@ -1,0 +1,124 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f5f6f8;
+  --foreground: #172033;
+  --card: #ffffff;
+  --navy: #0b1f3a;
+  --navy-soft: #18395f;
+  --gold: #d4a72c;
+  --gold-soft: #fff5d8;
+  --muted: #667085;
+  --border: #e4e7ec;
+  --success: #138a57;
+  --danger: #c73e4d;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: "Geist", "Geist Fallback", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono", "Geist Mono Fallback", ui-monospace, monospace;
+}
+
+* { box-sizing: border-box; }
+
+html { background: var(--background); }
+
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+}
+
+button, input, select, textarea { font: inherit; }
+button, a { -webkit-tap-highlight-color: transparent; }
+
+::selection { background: #f3dc92; color: var(--navy); }
+
+.card {
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: var(--card);
+  box-shadow: 0 1px 2px rgb(16 24 40 / 0.04);
+}
+
+.field {
+  width: 100%;
+  min-height: 2.75rem;
+  border: 1px solid #d0d5dd;
+  border-radius: 0.7rem;
+  background: white;
+  padding: 0.65rem 0.8rem;
+  color: var(--foreground);
+  outline: none;
+  transition: border-color 120ms, box-shadow 120ms;
+}
+
+.field:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgb(212 167 44 / 0.15);
+}
+
+.label {
+  display: block;
+  margin-bottom: 0.4rem;
+  color: #344054;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.btn {
+  display: inline-flex;
+  min-height: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border: 0;
+  border-radius: 0.7rem;
+  padding: 0.55rem 0.9rem;
+  font-size: 0.86rem;
+  font-weight: 650;
+  cursor: pointer;
+  transition: transform 100ms, background-color 120ms, opacity 120ms;
+}
+
+.btn:active { transform: translateY(1px); }
+.btn:disabled { cursor: not-allowed; opacity: 0.55; }
+.btn-primary { background: var(--navy); color: white; }
+.btn-primary:hover { background: var(--navy-soft); }
+.btn-gold { background: var(--gold); color: #172033; }
+.btn-gold:hover { background: #c39722; }
+.btn-outline { border: 1px solid #d0d5dd; background: white; color: #344054; }
+.btn-outline:hover { background: #f9fafb; }
+.btn-danger { background: #fff1f2; color: var(--danger); }
+
+.table-wrap { overflow-x: auto; }
+.data-table { width: 100%; border-collapse: collapse; white-space: nowrap; }
+.data-table th {
+  border-bottom: 1px solid var(--border);
+  background: #fafafa;
+  padding: 0.75rem 1rem;
+  color: #667085;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-align: left;
+  text-transform: uppercase;
+}
+.data-table td {
+  border-bottom: 1px solid #eef0f3;
+  padding: 0.85rem 1rem;
+  font-size: 0.86rem;
+  vertical-align: middle;
+}
+.data-table tr:last-child td { border-bottom: 0; }
+.data-table tbody tr:hover { background: #fcfcfd; }
+
+@media (max-width: 767px) {
+  .mobile-card-table thead { display: none; }
+  .mobile-card-table, .mobile-card-table tbody, .mobile-card-table tr, .mobile-card-table td { display: block; width: 100%; }
+  .mobile-card-table tr { border-bottom: 1px solid var(--border); padding: 0.85rem; }
+  .mobile-card-table tr:last-child { border-bottom: 0; }
+  .mobile-card-table td { border: 0; padding: 0.25rem 0; white-space: normal; }
+}
