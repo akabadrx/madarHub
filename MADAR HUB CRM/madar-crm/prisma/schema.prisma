@@ -1,0 +1,106 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Lead {
+  id                 String    @id @default(cuid())
+  name               String?
+  phone              String
+  source             String
+  interest           String?
+  suggestedPackageId String?
+  suggestedPackage   Package?  @relation(fields: [suggestedPackageId], references: [id])
+  status             String
+  visitDate          DateTime?
+  followUpDate       DateTime?
+  paymentStatus      String    @default("Pending")
+  amountPaid         Int       @default(0)
+  notes              String?
+  rawWhatsappSnippet String?
+  aiSummary          String?
+  aiConfidence       Float?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  payments     Payment[]
+  visits       Visit[]
+  interactions Interaction[]
+
+  @@index([status])
+  @@index([followUpDate])
+  @@index([phone])
+}
+
+model Payment {
+  id            String    @id @default(cuid())
+  leadId        String
+  lead          Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  packageId     String?
+  package       Package?  @relation(fields: [packageId], references: [id])
+  amount        Int
+  paymentMethod String
+  paymentDate   DateTime  @default(now())
+  notes         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([leadId])
+  @@index([paymentDate])
+}
+
+model Visit {
+  id        String   @id @default(cuid())
+  leadId    String
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  visitDate DateTime
+  status    String   @default("Scheduled")
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([leadId])
+  @@index([visitDate])
+}
+
+model Package {
+  id          String    @id @default(cuid())
+  name        String
+  price       Int
+  billingType String    @default("monthly")
+  description String?
+  active      Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  leadsAsSuggested Lead[]
+  payments         Payment[]
+}
+
+model Interaction {
+  id        String   @id @default(cuid())
+  leadId    String
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  type      String
+  content   String
+  createdAt DateTime @default(now())
+
+  @@index([leadId])
+  @@index([createdAt])
+}
+
+model MessageTemplate {
+  id        String   @id @default(cuid())
+  title     String
+  body      String
+  category  String   @default("general")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
