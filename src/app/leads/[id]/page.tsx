@@ -8,7 +8,7 @@ import { PaymentForm } from "@/components/payment-form";
 import { QuickStatus } from "@/components/quick-status";
 import { StatusBadge } from "@/components/status-badge";
 import { VisitForm } from "@/components/visit-form";
-import { ConversationSection } from "./conversation-section";
+import { ConversationSection } from "@/components/conversation-section";
 import { getDb } from "@/lib/db";
 import { formatDate, formatRwf, leadDisplayName, whatsappUrl } from "@/lib/utils";
 
