@@ -87,19 +87,11 @@ if command -v pm2 &> /dev/null; then
     log "PM2 detected. Restarting process '$PM2_APP_NAME'..."
 
     if [ -f "ecosystem.config.js" ]; then
-        if pm2 describe "$PM2_APP_NAME" > /dev/null 2>&1; then
-            pm2 restart ecosystem.config.js
-        else
-            warn "PM2 process '$PM2_APP_NAME' not found. Starting from ecosystem.config.js..."
-            pm2 start ecosystem.config.js
-        fi
+        pm2 delete "$PM2_APP_NAME" > /dev/null 2>&1 || true
+        pm2 start ecosystem.config.js
     else
-        if pm2 describe "$PM2_APP_NAME" > /dev/null 2>&1; then
-            pm2 restart "$PM2_APP_NAME"
-        else
-            warn "PM2 process '$PM2_APP_NAME' not found. Starting it now..."
-            pm2 start .next/standalone/server.js --name "$PM2_APP_NAME"
-        fi
+        pm2 delete "$PM2_APP_NAME" > /dev/null 2>&1 || true
+        pm2 start .next/standalone/server.js --name "$PM2_APP_NAME"
     fi
     pm2 save
 else
