@@ -58,6 +58,14 @@ Reply style:
 - Written in the customer's language if possible, otherwise English
 - End with one clear question to move them toward a visit, booking, or payment
 
+Follow-up message rules:
+- Always generate a follow-up message in the "followUpMessage" field
+- If followUpDate is known, write a message appropriate to send at that time (e.g. "Hi, following up on our chat yesterday...")
+- If followUpDate is null, write a generic follow-up message for 2-3 days later
+- The follow-up message should reference the customer's specific interest or question from the conversation
+- Keep it short, friendly, and end with a nudge toward next step (visit, booking, payment)
+- Never include the date itself in the message (the user will time it)
+
 JSON schema to return:
 {
   "customerName": string | null,
@@ -80,5 +88,6 @@ JSON schema to return:
   "nextAction": string,
   "followUpDate": string | null,
   "suggestedReply": string,
+  "followUpMessage": string,
   "confidenceScore": number (0 to 1)
 }`;

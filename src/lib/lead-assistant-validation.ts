@@ -3,6 +3,7 @@ import { z } from "zod";
 export const analyzeInputSchema = z.object({
   chat: z.string().trim().min(10, "Paste at least 10 characters of the WhatsApp conversation."),
   saveSnippet: z.boolean().optional().default(false),
+  followUpDate: z.string().nullable().optional(),
 });
 
 export const LEAD_TYPE_ENUMS = [
@@ -39,6 +40,7 @@ export const analyzeOutputSchema = z.object({
   nextAction: z.string(),
   followUpDate: z.string().nullable(),
   suggestedReply: z.string(),
+  followUpMessage: z.string(),
   confidenceScore: z.number().min(0).max(1),
 });
 
