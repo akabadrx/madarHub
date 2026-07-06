@@ -18,11 +18,25 @@ A lightweight CRM for managing Madar Hub WhatsApp leads, visits, follow-ups, pac
 npm install
 ```
 
-2. Create `.env` with a PostgreSQL connection:
+2. Create `.env` with a PostgreSQL connection and the sign-in credentials:
 
 ```env
 DATABASE_URL="postgresql://postgres:password@localhost:5432/madar_crm"
+
+# Auth gate (required — the CRM fails closed if these are unset)
+CRM_PASSWORD="choose-a-strong-shared-password"
+CRM_AUTH_SECRET="a-long-random-string-used-to-sign-sessions"
 ```
+
+Generate a signing secret with:
+
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
+```
+
+Access is a single shared password protected by a signed, HttpOnly session cookie
+(7-day expiry). All pages and server actions require sign-in; the cron digest route
+is exempt because it uses its own `CRON_SECRET` bearer token.
 
 3. Create the database schema and generate Prisma Client:
 
