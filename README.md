@@ -68,6 +68,14 @@ npm run build
 npm run db:studio
 ```
 
+## Online payments (Pesapal)
+
+The public pricing page can charge customers online via Pesapal; the checkout,
+callback, and IPN endpoints are hosted here under `/api/public/pesapal/*` and
+are exempt from the password gate (see `src/proxy.ts`). See
+[PESAPAL_GUIDE.md](./PESAPAL_GUIDE.md) for credentials, env vars, and IPN
+registration.
+
 ## MVP behavior
 
 - Phone numbers are normalized for `wa.me` links. Local Rwanda numbers beginning with `0` are converted to country code `250`.
