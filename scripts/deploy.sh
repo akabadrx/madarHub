@@ -78,6 +78,9 @@ npm run build
 log "Copying static assets to standalone output..."
 mkdir -p .next/standalone/.next
 cp -r .next/static .next/standalone/.next/static
+# The standalone server loads its own .env from next to server.js, not the
+# project root's .env — copy it every deploy or env var changes go unnoticed.
+cp .env .next/standalone/.env
 if [ -d "public" ]; then
     cp -r public .next/standalone/public
 fi
