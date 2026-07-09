@@ -68,18 +68,18 @@ export function ConversationReply({ leadId, leadPhone, leadName }: ConversationR
           {loading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
           Generate Reply
         </button>
-        {reply && (
+        {reply ? (
           <button className="btn btn-outline" onClick={() => { setChat(""); setReply(""); setFollowUp(""); }}>
             <RotateCw size={16} />Clear
           </button>
-        )}
+        ) : null}
       </div>
 
-      {reply && (
+      {reply ? (
         <div className="mt-5 space-y-4">
           <div className="rounded-xl border border-green-200 bg-green-50 p-4">
             <h3 className="mb-2 flex items-center gap-2 text-sm font-bold text-green-800">
-              <MessageCircle size={16} />Reply (copy &amp; paste now)
+              <MessageCircle size={16} />Reply (copy & paste now)
             </h3>
             <p className="mb-3 whitespace-pre-line text-sm leading-6 text-slate-700">{reply}</p>
             <div className="flex flex-wrap gap-2">
@@ -109,7 +109,7 @@ export function ConversationReply({ leadId, leadPhone, leadName }: ConversationR
 
           <p className="text-xs text-slate-400">The conversation you pasted is saved in the lead&apos;s timeline.</p>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
