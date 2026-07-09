@@ -23,7 +23,7 @@ export const INTERESTS = [
   "Virtual Business Address", "Meeting Room Rental", "Just Visiting", "Not Sure",
 ] as const;
 
-export const PAYMENT_METHODS = ["MoMo Pay", "Cash", "Bank Transfer", "Other"] as const;
+export const PAYMENT_METHODS = ["MoMo Pay", "Cash", "Bank Transfer", "Pesapal", "Other"] as const;
 export const VISIT_STATUSES = ["Scheduled", "Completed", "No Show", "Rescheduled"] as const;
 
 export const STATUS_STYLES: Record<string, string> = {

@@ -30,9 +30,10 @@ model Lead {
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
-  payments     Payment[]
-  visits       Visit[]
-  interactions Interaction[]
+  payments        Payment[]
+  visits          Visit[]
+  interactions    Interaction[]
+  pesapalPayments PesapalPayment[]
 
   @@index([status])
   @@index([followUpDate])
@@ -73,6 +74,7 @@ model Visit {
 model Package {
   id          String    @id @default(cuid())
   name        String
+  slug        String?   @unique
   price       Int
   billingType String    @default("monthly")
   description String?
@@ -82,6 +84,7 @@ model Package {
 
   leadsAsSuggested Lead[]
   payments         Payment[]
+  pesapalPayments  PesapalPayment[]
 }
 
 model Interaction {
@@ -103,4 +106,29 @@ model MessageTemplate {
   category  String   @default("general")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// Online checkout initiated from the public madarorbit.com site. Distinct from
+// Payment (which records payments staff enter manually) because a Pesapal
+// order exists before we know whether the customer actually paid.
+model PesapalPayment {
+  id                String    @id @default(cuid())
+  merchantReference String    @unique
+  packageId         String?
+  package           Package?  @relation(fields: [packageId], references: [id])
+  packageName       String
+  amount            Int
+  currency          String    @default("RWF")
+  customerName      String
+  customerEmail     String
+  customerPhone     String?
+  status            String    @default("PENDING") // PENDING | COMPLETED | FAILED
+  pesapalTrackingId String?
+  leadId            String?
+  lead              Lead?     @relation(fields: [leadId], references: [id])
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([status])
+  @@index([customerEmail])
 }

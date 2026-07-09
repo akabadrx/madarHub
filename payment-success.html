@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Payment Successful | Madar Hub Kigali</title>
+    <meta name="description" content="Your Madar Hub payment was successful. Thank you for choosing Madar Hub." />
+    <meta name="robots" content="noindex, follow" />
+    <link rel="icon" href="assets/madar-hub-icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="assets/madar-hub-icon.svg" />
+    <meta name="theme-color" content="#071A2D" />
+    <link rel="stylesheet" href="assets/styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="site-header">
+      <div class="header-inner">
+        <a class="brand" href="index.html" aria-label="Madar Hub home">
+          <img class="brand-logo" src="assets/madar-hub-logo-horizontal.svg" alt="Madar Hub" width="180" height="48" />
+          <img class="brand-logo brand-logo-dark" src="assets/madar-hub-logo-horizontal-dark-bg.svg" alt="Madar Hub" width="180" height="48" />
+        </a>
+        <nav class="site-nav" aria-label="Primary navigation">
+          <a href="index.html">Home</a>
+          <a href="about.html">About Us</a>
+          <a href="pricing.html">Pricing</a>
+          <a href="contact.html">Contact</a>
+        </nav>
+        <div class="header-actions">
+          <a class="button primary small" href="contact.html">Book a Visit</a>
+          <button class="nav-toggle" type="button" aria-label="Open navigation" aria-expanded="false">
+            <span class="nav-toggle-lines" aria-hidden="true"></span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main id="main" class="page-main">
+      <section class="hero compact" aria-labelledby="payment-success-title">
+        <div class="hero-inner">
+          <div class="hero-content">
+            <span class="hero-kicker">Payment confirmed</span>
+            <h1 id="payment-success-title">Thank You &mdash; Your Payment Was Successful</h1>
+            <p data-payment-summary>
+              Your payment to Madar Hub has been received.
+            </p>
+            <div class="hero-actions">
+              <a class="button whatsapp" href="https://wa.me/250783662543?text=Hello%20Madar%20Hub%2C%20I%20just%20paid%20online%20and%20wanted%20to%20confirm%20my%20booking" target="_blank" rel="noopener">Confirm on WhatsApp</a>
+              <a class="button primary" href="index.html">Back to Homepage</a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" aria-labelledby="payment-success-next-title">
+        <div class="section-inner">
+          <div class="section-title center">
+            <h2 id="payment-success-next-title">What Happens Next</h2>
+            <p>Message us on WhatsApp with your name and payment reference so our team can confirm your desk, room, or address setup right away. Bring a valid ID on your first visit.</p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        <div class="footer-grid">
+          <div>
+            <a class="brand" href="index.html" aria-label="Madar Hub home">
+              <img class="footer-brand-logo" src="assets/madar-hub-logo-horizontal-dark-bg.svg" alt="Madar Hub" width="170" height="40" />
+              <img class="footer-brand-logo footer-brand-logo-light" src="assets/madar-hub-logo-horizontal.svg" alt="Madar Hub" width="170" height="40" />
+            </a>
+            <p style="margin-top: 16px;">A focused coworking and business address space in Kimironko, Kigali.</p>
+          </div>
+          <div>
+            <h3>Quick links</h3>
+            <ul>
+              <li><a href="about.html">About Us</a></li>
+              <li><a href="pricing.html">Pricing</a></li>
+              <li><a href="contact.html">Contact</a></li>
+            </ul>
+          </div>
+          <div>
+            <h3>Contact</h3>
+            <ul>
+              <li><a href="mailto:contact@madarorbit.com">contact@madarorbit.com</a></li>
+              <li><a href="https://wa.me/250783662543">0783 662 543</a></li>
+              <li>
+                <a href="https://maps.app.goo.gl/fthfTgrErxNtQtJ16" target="_blank" rel="noopener">
+                  KG 42 Street, Kimironko, Kigali
+                </a>
+              </li>
+            </ul>
+          </div>
+        </div>
+        <div class="footer-bottom">
+          <p>&copy; Madar Hub. All rights reserved.</p>
+          <p>madarorbit.com</p>
+        </div>
+      </div>
+    </footer>
+    <a class="floating-whatsapp" href="https://wa.me/250783662543" aria-label="Message Madar Hub on WhatsApp" target="_blank" rel="noopener">WhatsApp</a>
+    <script src="assets/script.js" defer></script>
+    <script>
+      (() => {
+        const params = new URLSearchParams(window.location.search);
+        const pkg = params.get("package");
+        const amount = params.get("amount");
+        const ref = params.get("ref");
+        const summary = document.querySelector("[data-payment-summary]");
+        if (summary && (pkg || amount || ref)) {
+          summary.textContent = "";
+          summary.append("Your payment ");
+          if (pkg) {
+            summary.append("for ");
+            const strong = document.createElement("strong");
+            strong.textContent = pkg;
+            summary.append(strong, " ");
+          }
+          if (amount) {
+            const numericAmount = Number(amount);
+            if (Number.isFinite(numericAmount)) summary.append(`(${numericAmount.toLocaleString()} RWF) `);
+          }
+          if (ref) {
+            summary.append("Reference: ");
+            const strong = document.createElement("strong");
+            strong.textContent = ref;
+            summary.append(strong, " ");
+          }
+          summary.append("has been received.");
+        }
+      })();
+    </script>
+  </body>
+</html>

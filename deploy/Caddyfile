@@ -23,5 +23,16 @@ www.madarorbit.com {
 }
 
 madarorbit.com {
-    reverse_proxy 172.17.0.1:8080
+    # Madar Hub CRM (also serves the public Pesapal checkout/callback/IPN
+    # routes under /crm/api/public/pesapal/*). `handle` keeps the /crm
+    # prefix intact, matching the CRM's Next.js basePath.
+    handle /crm {
+        reverse_proxy 172.17.0.1:3200
+    }
+    handle /crm/* {
+        reverse_proxy 172.17.0.1:3200
+    }
+    handle {
+        reverse_proxy 172.17.0.1:8080
+    }
 }

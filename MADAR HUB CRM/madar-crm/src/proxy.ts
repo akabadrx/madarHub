@@ -21,8 +21,10 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   // Protect everything except the login page, the cron digest route (which has
-  // its own bearer-token auth), and framework/static assets.
+  // its own bearer-token auth), the public Pesapal checkout/callback/IPN routes
+  // (called by customers and by Pesapal itself, not logged-in staff), and
+  // framework/static assets.
   matcher: [
-    "/((?!login|api/notifications/daily-digest|_next/static|_next/image|favicon.ico).*)",
+    "/((?!login|api/notifications/daily-digest|api/public/pesapal|_next/static|_next/image|favicon.ico).*)",
   ],
 };
