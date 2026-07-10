@@ -1,2 +1,8 @@
 *.tar.gz
 deploy/release/
+
+# Full-size original poster sources (optimized .webp/.jpg are committed instead)
+assets/photos/coworking space.png
+assets/photos/private office.png
+assets/photos/meetings room.png
+assets/photos/coffee.png

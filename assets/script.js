@@ -83,6 +83,7 @@ const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)
 if (!prefersReducedMotion && "IntersectionObserver" in window) {
   const groupSelectors = [
     ".card-grid",
+    ".space-gallery",
     ".category-grid",
     ".pricing-cards-desktop",
     ".notes-list",

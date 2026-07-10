@@ -373,7 +373,7 @@ button, input, select, textarea {
 
 .hero {
   position: relative;
-  min-height: min(780px, calc(100vh - 76px));
+  min-height: calc(100svh - 76px);
   display: grid;
   align-items: center;
   isolation: isolate;
@@ -426,11 +426,15 @@ button, input, select, textarea {
 .hero-inner {
   width: min(var(--container), calc(100% - 48px));
   margin-inline: auto;
-  padding: 94px 0;
+  padding: clamp(20px, 3.4vh, 52px) 0;
 }
 
 .hero-content {
-  max-width: 760px;
+  max-width: 820px;
+}
+
+.hero .hero-kicker {
+  margin-bottom: clamp(8px, 1.4vh, 14px);
 }
 
 .hero-kicker,
@@ -457,13 +461,13 @@ button, input, select, textarea {
 }
 
 .hero h1 {
-  max-width: 840px;
+  max-width: 900px;
   color: var(--white);
   font-family: 'Montserrat', 'Inter', system-ui, sans-serif;
-  font-size: clamp(3rem, 7.5vw, 6.4rem);
+  font-size: clamp(2.3rem, 4.4vw, 3.7rem);
   font-weight: 800;
-  line-height: 0.98;
-  margin-bottom: 24px;
+  line-height: 1.05;
+  margin-bottom: clamp(12px, 1.8vh, 18px);
   letter-spacing: -0.02em;
   overflow-wrap: break-word;
 }
@@ -475,8 +479,12 @@ button, input, select, textarea {
 .hero p {
   max-width: 640px;
   color: rgba(255, 255, 255, 0.78);
-  font-size: clamp(1.05rem, 1.8vw, 1.25rem);
-  line-height: 1.65;
+  font-size: clamp(1.02rem, 1.6vw, 1.2rem);
+  line-height: 1.6;
+}
+
+.hero .hero-actions {
+  margin-top: clamp(20px, 3vh, 32px);
 }
 
 .hero-actions,
@@ -491,39 +499,43 @@ button, input, select, textarea {
 .hero-metrics {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 14px;
-  max-width: 780px;
-  margin-top: 56px;
+  gap: 12px;
+  max-width: 860px;
+  margin-top: clamp(18px, 3vh, 40px);
 }
 
 .metric-tile {
-  min-height: 108px;
-  padding: 18px;
+  min-height: 0;
+  padding: clamp(12px, 1.4vh, 16px);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: var(--radius);
   background: rgba(255, 255, 255, 0.06);
   backdrop-filter: blur(12px);
-  transition: background var(--transition), border-color var(--transition);
+  transition:
+    background var(--transition),
+    border-color var(--transition),
+    transform var(--transition);
 }
 
 .metric-tile:hover {
   background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(214, 168, 79, 0.3);
+  border-color: rgba(214, 168, 79, 0.35);
+  transform: translateY(-3px);
 }
 
 .metric-tile strong {
   display: block;
   color: var(--white);
   font-family: 'Montserrat', 'Inter', system-ui, sans-serif;
-  font-size: 1.05rem;
+  font-size: 1rem;
   font-weight: 700;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .metric-tile span {
   color: rgba(255, 255, 255, 0.65);
-  font-size: 0.88rem;
-  line-height: 1.4;
+  font-size: 0.83rem;
+  line-height: 1.35;
 }
 
 .section {
@@ -815,6 +827,47 @@ button, input, select, textarea {
 .contact-card p,
 .testimonial-card p {
   margin-bottom: 0;
+}
+
+/* ---------- Space gallery (portrait poster cards) ---------- */
+
+.space-gallery {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.space-shot {
+  position: relative;
+  margin: 0;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background: var(--navy);
+  box-shadow: var(--shadow-sm);
+  transition:
+    box-shadow var(--transition),
+    transform var(--transition),
+    border-color var(--transition);
+}
+
+.space-shot > picture,
+.space-shot > img {
+  display: block;
+}
+
+.space-shot img {
+  width: 100%;
+  height: 100%;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+}
+
+.space-shot:hover,
+.space-shot:focus-within {
+  transform: translateY(-6px);
+  box-shadow: var(--shadow-lg);
+  border-color: rgba(214, 168, 79, 0.45);
 }
 
 .check-list {
@@ -2103,12 +2156,12 @@ button, input, select, textarea {
   }
 
   .hero-inner {
-    padding: 72px 0;
+    padding: clamp(40px, 8vh, 60px) 0;
   }
 
   .hero h1 {
-    max-width: 12ch;
-    font-size: clamp(2.4rem, 11vw, 4rem);
+    max-width: 16ch;
+    font-size: clamp(2.3rem, 9vw, 3.4rem);
   }
 
   .hero-actions,
@@ -2135,7 +2188,7 @@ button, input, select, textarea {
 
   .hero-metrics {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    margin-top: 42px;
+    margin-top: 28px;
   }
 
   .section {
@@ -2152,6 +2205,11 @@ button, input, select, textarea {
   .category-grid,
   .contact-strip {
     grid-template-columns: 1fr;
+  }
+
+  .space-gallery {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
   }
 
   .pricing-cards-desktop {
@@ -2231,6 +2289,11 @@ button, input, select, textarea {
     right: -280px;
     bottom: 4%;
     opacity: 0.12;
+  }
+
+  .space-gallery {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
   }
 
   .section-title h2 {
@@ -2853,5 +2916,31 @@ body.pesapal-modal-open {
   .hero-content > *,
   .hero-metrics {
     animation: none;
+  }
+
+  .space-shot > img {
+    transform: none;
+    transition: none;
+  }
+}
+
+/* Keep the whole hero in view on short viewports by compacting the metric
+   tiles to their labels only. */
+@media (min-width: 821px) and (max-height: 680px) {
+  .hero-metrics {
+    gap: 10px;
+    margin-top: clamp(14px, 2.4vh, 28px);
+  }
+
+  .metric-tile {
+    padding: 10px 14px;
+  }
+
+  .metric-tile span {
+    display: none;
+  }
+
+  .metric-tile strong {
+    margin-bottom: 0;
   }
 }
