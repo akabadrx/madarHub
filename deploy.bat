@@ -43,7 +43,7 @@ set "ARCHIVE=%ARCHIVE_DIR%\madarorbit-site-deploy-%STAMP%.tar.gz"
 echo Packaging site files...
 if not exist "%ARCHIVE_DIR%" mkdir "%ARCHIVE_DIR%"
 if errorlevel 1 goto fail_package
-tar -czf "%ARCHIVE%" index.html about.html pricing.html events.html badr-academy.html contact.html payment-success.html payment-pending.html payment-failed.html README.md robots.txt sitemap.xml assets
+tar -czf "%ARCHIVE%" index.html about.html pricing.html events.html badr-academy.html contact.html payment-success.html payment-pending.html payment-failed.html 404.html coworking-space-kigali.html fixed-desk-kigali.html virtual-office-business-address-kigali.html rdb-business-address-kigali.html private-office-team-room-kigali.html meeting-room-kigali.html training-room-workshop-venue-kigali.html study-space-kigali.html coffee-internet-workspace-kigali.html insights README.md robots.txt sitemap.xml assets
 if errorlevel 1 goto fail_package
 
 if defined DRY_RUN (

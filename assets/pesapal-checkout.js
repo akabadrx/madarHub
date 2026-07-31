@@ -2,7 +2,18 @@
   const triggers = document.querySelectorAll("[data-pesapal-package]");
   if (!triggers.length) return;
 
-  const CHECKOUT_URL = "/crm/api/public/pesapal/checkout";
+  const CHECKOUT_PATH = "/crm/api/public/pesapal/checkout";
+  const CANONICAL_ORIGIN = "https://madarorbit.com";
+  const WHATSAPP_URL = "https://wa.me/250783662543";
+  const REQUEST_TIMEOUT_MS = 45000;
+
+  // The pricing page can be reached on www.madarorbit.com (or from a cached or
+  // mirrored copy), where a relative URL 301s to the canonical host and the
+  // browser kills the request as a cross-origin redirect. Always call the
+  // canonical origin directly; the API allows the www origin via CORS.
+  const isLocal = ["localhost", "127.0.0.1"].includes(location.hostname);
+  const CHECKOUT_URL =
+    location.origin === CANONICAL_ORIGIN || isLocal ? CHECKOUT_PATH : CANONICAL_ORIGIN + CHECKOUT_PATH;
 
   const overlay = document.createElement("div");
   overlay.className = "pesapal-overlay";
@@ -93,11 +104,15 @@
     submitBtn.disabled = true;
     submitBtn.textContent = "Redirecting…";
 
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
     try {
       const res = await fetch(CHECKOUT_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
+        signal: controller.signal,
       });
       const data = await res.json().catch(() => ({}));
 
@@ -107,10 +122,37 @@
 
       window.location.href = data.redirectUrl;
     } catch (error) {
-      errorEl.textContent = error instanceof Error ? error.message : "Could not start payment. Please try again.";
-      errorEl.hidden = false;
+      showError(error);
       submitBtn.disabled = false;
       submitBtn.textContent = "Continue to Pesapal";
+    } finally {
+      clearTimeout(timer);
     }
   });
+
+  // A failed fetch surfaces as a bare "Failed to fetch"/"aborted" TypeError, which
+  // tells the customer nothing. Translate connection-level failures into plain
+  // language and always leave a way to complete the booking.
+  function showError(error) {
+    const isAbort = error && error.name === "AbortError";
+    const isNetwork = error instanceof TypeError;
+    let message;
+
+    if (isAbort) {
+      message = "The payment page is taking too long to respond. Please try again.";
+    } else if (isNetwork) {
+      message = "We couldn't reach our payment service. Check your internet connection and try again.";
+    } else {
+      message = error instanceof Error ? error.message : "Could not start payment. Please try again.";
+    }
+
+    errorEl.textContent = message + " ";
+    const link = document.createElement("a");
+    link.href = WHATSAPP_URL;
+    link.target = "_blank";
+    link.rel = "noopener";
+    link.textContent = "Or book on WhatsApp.";
+    errorEl.appendChild(link);
+    errorEl.hidden = false;
+  }
 })();

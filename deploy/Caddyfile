@@ -19,7 +19,15 @@ familycare-ae.com {
 }
 
 www.madarorbit.com {
-    redir https://madarorbit.com{uri} permanent
+    # Redirecting the CRM API to the canonical host turns a checkout POST into a
+    # cross-origin redirect, which browsers abort with "Failed to fetch". Serve
+    # those routes on www instead and only redirect the marketing pages.
+    handle /crm/* {
+        reverse_proxy 172.17.0.1:3200
+    }
+    handle {
+        redir https://madarorbit.com{uri} permanent
+    }
 }
 
 madarorbit.com {
