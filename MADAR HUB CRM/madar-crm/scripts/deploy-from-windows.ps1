@@ -25,7 +25,10 @@ function Test-SshAvailable {
 }
 
 function Invoke-VpsDeploy {
-    $remoteCommand = "bash $DeployScript"
+    # deploy.sh must run from the project root - it resolves the app directory from
+    # the working directory. Without this cd it runs in the SSH home directory and
+    # deploys whatever package.json happens to be sitting there.
+    $remoteCommand = "cd '$ProjectDir' && bash '$DeployScript'"
 
     $sshArgs = @(
         "-o", "StrictHostKeyChecking=no"
