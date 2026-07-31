@@ -57,7 +57,7 @@ npm ci
 # Generate Prisma client
 if [ -f "prisma/schema.prisma" ]; then
     log "Generating Prisma client..."
-    npx prisma generate
+    ./node_modules/.bin/prisma generate
 else
     warn "No prisma/schema.prisma found. Skipping Prisma generation."
 fi
@@ -65,7 +65,7 @@ fi
 # Deploy database migrations (Prisma reads .env automatically)
 if [ -f "prisma/schema.prisma" ]; then
     log "Deploying database migrations..."
-    npx prisma migrate deploy || warn "Database migration deploy failed"
+    ./node_modules/.bin/prisma migrate deploy || warn "Database migration deploy failed"
 else
     info "No Prisma schema found. Skipping migrations."
 fi

@@ -9,7 +9,7 @@
 
 # -------------------- CONFIGURATION --------------------
 $VpsUser     = "root"                       # Your VPS username
-$VpsHost     = "YOUR.VPS.IP.OR.DOMAIN"      # Your VPS IP address or domain
+$VpsHost     = "72.62.132.37"      # Your VPS IP address or domain
 $VpsKey      = "$env:USERPROFILE\.ssh\id_rsa"  # Path to your SSH private key (optional)
 $ProjectDir  = "/var/www/madar-crm"        # Path to madar-crm on the VPS
 $DeployScript = "$ProjectDir/scripts/deploy.sh"
