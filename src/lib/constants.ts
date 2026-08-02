@@ -55,7 +55,7 @@ export const DEFAULT_TEMPLATES = [
   {
     title: "Prices message",
     category: "sales",
-    body: `Here are our current packages:\n\nCoworking Day Pass: 10,000 RWF/day\nFixed Desk Monthly Subscription: 100,000 RWF/month\nPrivate Team Room: 600,000 RWF/month, up to 6 members\nStudent Study Pass: 3,000 RWF/day\nVirtual Business Address: 100,000 RWF/month\nFixed Desk + Virtual Address: 120,000 RWF/month\nMeeting Room Rental: 25,000 RWF/4 hours or 30,000 RWF/8 hours\n\nWould you like to visit first or reserve a space?`,
+    body: `Here are our current VAT-exclusive packages (18% VAT is added):\n\nCoworking Day Pass: 7,000 RWF/day + VAT\nFixed Desk Monthly Subscription: 100,000 RWF/month + VAT\nPrivate Team Room — Standard: 450,000 RWF/month + VAT, up to 6 members; coffee is not included and is available for 1,500 RWF + VAT per cup instead of 3,000 RWF\nPrivate Team Room — With Coffee: 600,000 RWF/month + VAT, up to 6 members; coffee included\nStudent Study Pass: 3,000 RWF/day + VAT\nVirtual Business Address: 100,000 RWF/month + VAT\nFixed Desk + Virtual Address: 120,000 RWF/month + VAT\nMeeting Room: 20,000 RWF + VAT/up to 4 hours; 30,000 RWF + VAT/up to 6 hours; or 40,000 RWF + VAT/full day up to 12 hours\n\nWould you like to visit first or reserve a space?`,
   },
   {
     title: "Visit message",

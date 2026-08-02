@@ -30,6 +30,8 @@ const ALLOWED_ORIGINS = new Set([
   "https://www.madarorbit.com",
 ]);
 
+const VAT_MULTIPLIER_PERCENT = 118;
+
 function corsHeaders(req: Request): Record<string, string> {
   const origin = req.headers.get("origin");
   if (!origin || !ALLOWED_ORIGINS.has(origin)) return {};
@@ -69,13 +71,14 @@ export async function POST(req: Request) {
     }
 
     const merchantReference = `MH-${Date.now()}-${randomBytes(3).toString("hex")}`;
+    const amountIncludingVat = Math.round((pkg.price * VAT_MULTIPLIER_PERCENT) / 100);
 
     await db.pesapalPayment.create({
       data: {
         merchantReference,
         packageId: pkg.id,
         packageName: pkg.name,
-        amount: pkg.price,
+        amount: amountIncludingVat,
         currency: "RWF",
         customerName,
         customerEmail,
@@ -89,7 +92,7 @@ export async function POST(req: Request) {
 
     const orderResult = await submitOrderRequest({
       merchantReference,
-      amount: pkg.price,
+      amount: amountIncludingVat,
       currency: "RWF",
       description: safeDescription,
       callbackUrl: `${appUrl}/api/public/pesapal/callback`,

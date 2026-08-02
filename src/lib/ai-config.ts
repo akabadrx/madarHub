@@ -20,16 +20,16 @@ Do not invent facts.
 If information is missing, set the field to null.
 Return only valid JSON.
 
-Services and pricing:
-- Coworking Day Pass: 10,000 RWF/day
-- Fixed Desk Monthly Subscription: 100,000 RWF/month
-- Private Team Room: 600,000 RWF/month, up to 6 registered members
-- Student Study Pass: 3,000 RWF/day (adults can use it too, but must book first)
-- Virtual Business Address: 100,000 RWF/month (professional business address at KG 42 St, Ramiro, Kibagabaga, Kimironko, Gasabo, Kigali; includes mail handling and Address Confirmation Letter on request for active subscribers; no tenancy or lease rights created)
-- Fixed Desk + Virtual Address bundle: 120,000 RWF/month (combines Fixed Desk Monthly Subscription with Virtual Business Address)
-- Meeting Room Rental: 25,000 RWF for 4 hours or 30,000 RWF for 8 hours (interviews, client meetings, training, workshops, presentations, team discussions)
-- Meeting/Training Room full day up to 25 people: 40,000 RWF
-- Meeting/Training Room full day up to 30 people: 60,000 RWF
+Services and VAT-exclusive pricing (add 18% VAT to every price):
+- Coworking Day Pass: 7,000 RWF/day + VAT
+- Fixed Desk Monthly Subscription: 100,000 RWF/month + VAT
+- Private Team Room — Standard: 450,000 RWF/month + VAT, up to 6 registered members; coffee is not included and can be ordered for 1,500 RWF + VAT per cup instead of 3,000 RWF
+- Private Team Room — With Coffee: 600,000 RWF/month + VAT, up to 6 registered members; coffee is included on request, subject to availability
+- Student Study Pass: 3,000 RWF/day + VAT (adults can use it too, but must book first)
+- Virtual Business Address: 100,000 RWF/month + VAT (professional business address at KG 42 St, Ramiro, Kibagabaga, Kimironko, Gasabo, Kigali; includes mail handling and Address Confirmation Letter on request for active subscribers; no tenancy or lease rights created)
+- Fixed Desk + Virtual Address bundle: 120,000 RWF/month + VAT (combines Fixed Desk Monthly Subscription with Virtual Business Address)
+- Meeting Room Rental: 20,000 RWF + VAT for up to 4 hours; 30,000 RWF + VAT for up to 6 hours; or 40,000 RWF + VAT for a full day of up to 12 hours
+- Meeting and workshop room capacity: up to 25 people
 
 Facilities:
 - Location: Kimironko, KG 42 Street, Kigali (near the back side of Four Square Church)
@@ -44,8 +44,8 @@ Classification rules:
 - Asks about monthly/fixed desk/routine workspace/bringing monitor → Monthly Fixed Desk Lead
 - Asks about students/study space/3,000 RWF → Student Study Lead
 - Asks about meeting room/training/workshop/presentations → Meeting/Training Room Lead
-- Mentions 25 people → suggest Meeting/Training Room full day 40,000 RWF
-- Mentions 30 people → suggest Meeting/Training Room full day 60,000 RWF
+- Mentions up to 25 people → suggest the appropriate Meeting Room duration tier
+- Mentions more than 25 people → explain that the maximum capacity is 25 and ask whether they can reduce the group size
 - Asks about partitioned rooms/parking/washrooms/private office/organization setup → Private Office Lead
 - Asks about exact location → Location Request
 - Mentions "next week"/"tomorrow"/"today"/specific month → extract date as visit intent
