@@ -205,7 +205,7 @@ export default function LeadAssistantPage() {
           <label className="label mb-2">Paste WhatsApp chat here</label>
           <textarea
             className="field min-h-52 resize-y text-sm leading-6 sm:min-h-64"
-            placeholder={`Example:\n[10:32 AM] Customer: Hi, I saw your post about coworking space. How much is it for a day pass?\n[10:33 AM] Customer: I need a quiet place to work for a few days next week\n[10:35 AM] You: Welcome to Madar Hub! Our day pass is 10,000 RWF...\n\nPaste the full conversation below 👇`}
+            placeholder={`Example:\n[10:32 AM] Customer: Hi, I saw your post about coworking space. How much is it for a day pass?\n[10:33 AM] Customer: I need a quiet place to work for a few days next week\n[10:35 AM] You: Welcome to Madar Hub! Our day pass is 7,000 RWF + VAT...\n\nPaste the full conversation below 👇`}
             value={chat}
             onChange={(e) => setChat(e.target.value)}
           />

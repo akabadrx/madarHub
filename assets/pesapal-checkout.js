@@ -38,7 +38,7 @@
         </label>
         <p class="pesapal-error" data-pesapal-error aria-live="polite" hidden></p>
         <button type="submit" class="button primary" data-pesapal-submit>Continue to Pesapal</button>
-        <p class="pesapal-note">You will be redirected to Pesapal's secure page to pay by card or mobile money.</p>
+        <p class="pesapal-note">Prices exclude VAT. 18% VAT is added to the amount charged on Pesapal's secure payment page.</p>
       </form>
     </div>
   `;

@@ -57,22 +57,22 @@ function buildMockReply(
   let followUpMessage = `Hi ${leadName}! Just checking in — is there anything else you needed regarding our coworking space? Let me know!`;
 
   if (lead.interest?.includes("Day Pass") || lower.includes("day pass")) {
-    suggestedReply = `Hi ${leadName}! Yes, our Day Pass is 10,000 RWF with full access to the workspace. Would you like to come in today or tomorrow?`;
+    suggestedReply = `Hi ${leadName}! Yes, our Day Pass is 7,000 RWF plus VAT with full access to the workspace. Would you like to come in today or tomorrow?`;
     followUpMessage = `Hi ${leadName}! Did you manage to visit Madar Hub? We'd love to host you. The Day Pass is ready whenever you are!`;
   } else if (lead.interest?.includes("Monthly") || lower.includes("monthly") || lower.includes("fixed desk")) {
-    suggestedReply = `Hi ${leadName}! Great to hear from you again. Our monthly fixed desk is 100,000 RWF/month. Would you like to schedule a tour?`;
+    suggestedReply = `Hi ${leadName}! Great to hear from you again. Our monthly fixed desk is 100,000 RWF plus VAT/month. Would you like to schedule a tour?`;
     followUpMessage = `Hi ${leadName}! Just following up on our chat about the monthly desk. Would this week work for a visit?`;
   } else if (lead.interest?.includes("Student") || lower.includes("study") || lower.includes("student")) {
-    suggestedReply = `Hi ${leadName}! The student study pass is 3,000 RWF/day. Which day would you like to come?`;
+    suggestedReply = `Hi ${leadName}! The student study pass is 3,000 RWF plus VAT/day. Which day would you like to come?`;
     followUpMessage = `Hi ${leadName}! Checking in — did you find a good day to study at Madar Hub? Let me know and I'll reserve a spot for you.`;
   } else if (lead.interest?.includes("Meeting") || lower.includes("meeting")) {
-    suggestedReply = `Hi ${leadName}! For the meeting room, it's 25,000 RWF (4hrs) or 30,000 RWF (8hrs). What date and number of people are you looking at?`;
+    suggestedReply = `Hi ${leadName}! The meeting room is 20,000 RWF plus VAT for up to 4 hours, 30,000 RWF plus VAT for up to 6 hours, or 40,000 RWF plus VAT for a full day up to 12 hours. What date, duration, and number of people are you looking at?`;
     followUpMessage = `Hi ${leadName}! Have you finalized the date for your meeting? Let me know and I'll confirm availability.`;
   } else if (lead.interest?.includes("Private") || lower.includes("private")) {
     suggestedReply = `Hi ${leadName}! Thanks for reaching out again. Would you like to schedule a tour of our private team room?`;
     followUpMessage = `Hi ${leadName}! Following up — would you like to visit and see the private team room in person?`;
   } else if (lower.includes("price") || lower.includes("how much") || lower.includes("cost")) {
-    suggestedReply = `Hi ${leadName}! Here are our prices: Day Pass 10K RWF, Monthly Desk 100K RWF, Student Pass 3K RWF. What interests you most?`;
+    suggestedReply = `Hi ${leadName}! Our VAT-exclusive prices include: Day Pass 7K RWF, Monthly Desk 100K RWF, and Student Pass 3K RWF. We add 18% VAT. What interests you most?`;
     followUpMessage = `Hi ${leadName}! Did you have a chance to look at the pricing? Let me know which option works best for you!`;
   } else if (lower.includes("visit") || lower.includes("come") || lower.includes("location")) {
     suggestedReply = `Hi ${leadName}! We're at KG 42 Street, Kimironko, near Four Square Church. When would you like to visit?`;

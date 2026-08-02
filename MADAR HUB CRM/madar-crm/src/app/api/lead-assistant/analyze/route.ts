@@ -64,37 +64,37 @@ function buildMockResponse(chat: string): AnalyzeOutput {
     mock.leadType = "Day Pass Lead";
     mock.leadStatus = "Asked Price";
     mock.interest = "Day Pass";
-    mock.suggestedPackage = "Coworking Day Pass — 10,000 RWF/day";
-    mock.suggestedReply = "Our Coworking Day Pass is 10,000 RWF per day, which gives you full access to our workspace with good internet and a professional environment. Would you like to come in today or tomorrow?";
+    mock.suggestedPackage = "Coworking Day Pass — 7,000 RWF/day + VAT";
+    mock.suggestedReply = "Our Coworking Day Pass is 7,000 RWF plus VAT per day, which gives you full access to our workspace with good internet and a professional environment. Would you like to come in today or tomorrow?";
   }
 
   if (lower.includes("monthly") || lower.includes("fixed desk") || lower.includes("routine") || lower.includes("workspace") || lower.includes("bring my monitor") || lower.includes("permanent desk")) {
     mock.leadType = "Monthly Fixed Desk Lead";
     mock.leadStatus = "Asked Price";
     mock.interest = "Monthly Fixed Desk";
-    mock.suggestedPackage = "Fixed Desk Monthly Subscription — 100,000 RWF/month";
-    mock.suggestedReply = "Our Fixed Desk Monthly Subscription is 100,000 RWF per month. You get a dedicated desk in a quiet, professional workspace, and you can bring your own monitor. Would you like to schedule a visit to see the space?";
+    mock.suggestedPackage = "Fixed Desk Monthly Subscription — 100,000 RWF/month + VAT";
+    mock.suggestedReply = "Our Fixed Desk Monthly Subscription is 100,000 RWF plus VAT per month. You get a dedicated desk in a quiet, professional workspace, and you can bring your own monitor. Would you like to schedule a visit to see the space?";
   }
 
   if (lower.includes("student") || lower.includes("study") || lower.includes("3,000") || lower.includes("3000") || lower.includes("revision") || lower.includes("exam")) {
     mock.leadType = "Student Study Lead";
     mock.leadStatus = "Asked Price";
     mock.interest = "Student Study Space";
-    mock.suggestedPackage = "Student Study Pass — 3,000 RWF/day";
-    mock.suggestedReply = "Our Student Study Pass is only 3,000 RWF per day — perfect for studying or revision in a quiet environment. Adults can use it too, just book in advance. What day would you like to come?";
+    mock.suggestedPackage = "Student Study Pass — 3,000 RWF/day + VAT";
+    mock.suggestedReply = "Our Student Study Pass is 3,000 RWF plus VAT per day — perfect for studying or revision in a quiet environment. Adults can use it too, just book in advance. What day would you like to come?";
   }
 
   if (lower.includes("training") || lower.includes("workshop") || lower.includes("presentation") || lower.includes("25 people") || lower.includes("30 people") || lower.includes("team meeting") || lower.includes("conference")) {
     const peopleMatch = chat.match(/(\d+)\s*(?:people|persons|participants|attendees|pax)/i);
     const numPeople = peopleMatch ? parseInt(peopleMatch[1]) : null;
-    if ((numPeople && numPeople > 25) || lower.includes("30 people")) {
+    if (numPeople && numPeople > 25) {
       mock.leadType = "Training Room Lead";
-      mock.suggestedPackage = "Meeting Room Rental — 30,000 RWF for 8 hours (full day)";
-      mock.suggestedReply = "For a full day (8 hours), our Meeting Room Rental is 30,000 RWF, with a Smart TV, whiteboard, tables, and chairs included. We also offer a 4-hour option at 25,000 RWF. May I know the date and number of people?";
+      mock.suggestedPackage = null;
+      mock.suggestedReply = "Our Meeting & Workshop Room accommodates up to 25 people. Would you be able to reduce the group to 25, or would you like help discussing another arrangement?";
     } else {
       mock.leadType = "Meeting Room Lead";
-      mock.suggestedPackage = "Meeting Room Rental — 25,000 RWF for 4 hours or 30,000 RWF for 8 hours";
-      mock.suggestedReply = "Our Meeting Room Rental is 25,000 RWF for 4 hours or 30,000 RWF for 8 hours (full day), with a 50-inch Smart TV, whiteboard, tables, and chairs. May I know the date and number of people?";
+      mock.suggestedPackage = "Meeting Room — 20,000 RWF + VAT/4 hours; 30,000 RWF + VAT/6 hours; 40,000 RWF + VAT/12 hours";
+      mock.suggestedReply = "Our VAT-exclusive Meeting Room rates are 20,000 RWF for up to 4 hours, 30,000 RWF for up to 6 hours, or 40,000 RWF for a full day of up to 12 hours. May I know the date, duration, and number of people?";
     }
     mock.leadStatus = "Asked Price";
     mock.interest = "Meeting / Training Room";
@@ -102,12 +102,17 @@ function buildMockResponse(chat: string): AnalyzeOutput {
     mock.paymentIntent = numPeople !== null;
   }
 
-  if (lower.includes("private office") || lower.includes("team room") || lower.includes("partitioned room") || lower.includes("organization") || lower.includes("6 members") || lower.includes("600,000") || lower.includes("600000")) {
+  if (lower.includes("private office") || lower.includes("team room") || lower.includes("partitioned room") || lower.includes("organization") || lower.includes("6 members") || lower.includes("450,000") || lower.includes("450000") || lower.includes("600,000") || lower.includes("600000")) {
     mock.leadType = "Private Office Lead";
     mock.leadStatus = "Asked Price";
     mock.interest = "Private Team Room";
-    mock.suggestedPackage = "Private Team Room — 600,000 RWF/month, up to 6 members";
-    mock.suggestedReply = "Our Private Team Room is 600,000 RWF per month, suitable for up to 6 registered members. It includes parking, washrooms, and a quiet environment. Would you like to schedule a visit to see the space?";
+    const wantsCoffeeIncluded = lower.includes("600,000") || lower.includes("600000") || lower.includes("coffee included") || lower.includes("include coffee");
+    mock.suggestedPackage = wantsCoffeeIncluded
+      ? "Private Team Room — With Coffee — 600,000 RWF/month + VAT, up to 6 members"
+      : "Private Team Room — Standard — 450,000 RWF/month + VAT, up to 6 members";
+    mock.suggestedReply = wantsCoffeeIncluded
+      ? "Our Private Team Room with coffee included is 600,000 RWF plus VAT per month for up to 6 registered members. Would you like to schedule a visit to see the space?"
+      : "Our standard Private Team Room is 450,000 RWF plus VAT per month for up to 6 registered members. Coffee is not included, but team members can order it for 1,500 RWF plus VAT per cup instead of 3,000 RWF. We also offer a 600,000 RWF plus VAT option with coffee included. Would you like to schedule a visit?";
   }
 
   if (lower.includes("visit") || lower.includes("come over") || lower.includes("drop by") || lower.includes("stop by") || lower.includes("see the space")) {
@@ -156,11 +161,11 @@ function buildMockResponse(chat: string): AnalyzeOutput {
   }
 
   if (mock.leadType === "Day Pass Lead") {
-    mock.followUpMessage = "Hi! I was checking in — did you manage to visit Madar Hub? Our Day Pass is 10,000 RWF and we'd love to host you. Let me know if you have any questions!";
+    mock.followUpMessage = "Hi! I was checking in — did you manage to visit Madar Hub? Our Day Pass is 7,000 RWF plus VAT and we'd love to host you. Let me know if you have any questions!";
   } else if (mock.leadType === "Monthly Fixed Desk Lead") {
     mock.followUpMessage = "Hi! Just following up on our chat about the monthly fixed desk. Would you like to schedule a visit to see the workspace? We can set up a tour at your convenience.";
   } else if (mock.leadType === "Student Study Lead") {
-    mock.followUpMessage = "Hi! Checking in — are you still interested in the study space? It's 3,000 RWF per day. Let me know which day works for you and I'll save you a spot!";
+    mock.followUpMessage = "Hi! Checking in — are you still interested in the study space? It's 3,000 RWF plus VAT per day. Let me know which day works for you and I'll save you a spot!";
   } else if (mock.leadType === "Meeting Room Lead" || mock.leadType === "Training Room Lead") {
     mock.followUpMessage = "Hi! Following up on your meeting room inquiry. Have you finalized the date and number of attendees? Let me know and I'll confirm availability for you.";
   } else if (mock.leadType === "Private Office Lead") {
