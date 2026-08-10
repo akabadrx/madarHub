@@ -15,20 +15,34 @@ export default async function MembersPage({
 }) {
   const params = await searchParams;
   const q = params.q?.trim();
-  const activeMembers = await getDb().lead.findMany({
-    where: {
-      status: { in: [...ACTIVE_MEMBER_STATUSES] },
-    },
-    include: {
-      suggestedPackage: true,
-      payments: {
-        include: { package: true },
-        orderBy: { paymentDate: "desc" },
-        take: 1,
+  const db = getDb();
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const [activeMembers, monthlyPayments] = await db.$transaction([
+    db.lead.findMany({
+      where: {
+        status: { in: [...ACTIVE_MEMBER_STATUSES] },
       },
-    },
-    orderBy: { updatedAt: "desc" },
-  });
+      include: {
+        suggestedPackage: true,
+        payments: {
+          include: { package: true },
+          orderBy: { paymentDate: "desc" },
+          take: 1,
+        },
+      },
+      orderBy: { updatedAt: "desc" },
+    }),
+    db.payment.groupBy({
+      by: ["leadId"],
+      orderBy: { leadId: "asc" },
+      where: {
+        paymentDate: { gte: monthStart, lte: now },
+        lead: { status: { in: [...ACTIVE_MEMBER_STATUSES] } },
+      },
+      _sum: { amount: true },
+    }),
+  ]);
   const normalizedQuery = q?.toLocaleLowerCase();
   const members = normalizedQuery
     ? activeMembers.filter((member) => {
@@ -39,21 +53,23 @@ export default async function MembersPage({
       })
     : activeMembers;
 
-  const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const renewedThisMonth = activeMembers.filter(
-    (member) => member.payments[0]?.paymentDate >= monthStart,
-  ).length;
+  const monthlyRevenueByMember = new Map(
+    monthlyPayments.map((payment) => [payment.leadId, payment._sum?.amount || 0]),
+  );
+  const renewedThisMonth = monthlyPayments.length;
   const monthlyPlans = activeMembers.filter((member) => {
     const pkg = member.payments[0]?.package || member.suggestedPackage;
     return pkg?.billingType === "monthly";
   }).length;
-  const memberRevenue = activeMembers.reduce((sum, member) => sum + member.amountPaid, 0);
+  const monthlyRevenue = monthlyPayments.reduce(
+    (sum, payment) => sum + (payment._sum?.amount || 0),
+    0,
+  );
   const metrics = [
     ["Active now", activeMembers.length, UserRoundCheck, "text-emerald-700 bg-emerald-50"],
     ["Monthly plans", monthlyPlans, Users, "text-blue-700 bg-blue-50"],
     ["Renewed this month", renewedThisMonth, CalendarCheck2, "text-violet-700 bg-violet-50"],
-    ["Member revenue", formatRwf(memberRevenue), Banknote, "text-amber-700 bg-amber-50"],
+    ["Monthly revenue", formatRwf(monthlyRevenue), Banknote, "text-amber-700 bg-amber-50"],
   ] as const;
 
   return (
@@ -101,7 +117,7 @@ export default async function MembersPage({
         <div className="table-wrap">
           <table className="data-table mobile-card-table">
             <thead>
-              <tr><th>Member</th><th>Plan</th><th>Status</th><th>Last payment</th><th>Total paid</th><th>Actions</th></tr>
+              <tr><th>Member</th><th>Plan</th><th>Status</th><th>Last payment</th><th>This month</th><th>Total paid</th><th>Actions</th></tr>
             </thead>
             <tbody>
               {members.map((member) => {
@@ -118,6 +134,7 @@ export default async function MembersPage({
                     <td>{memberPackage?.name || member.interest || "Not set"}</td>
                     <td><StatusBadge status={member.status} /></td>
                     <td>{formatDate(latestPayment?.paymentDate)}</td>
+                    <td className="font-semibold text-emerald-700">{formatRwf(monthlyRevenueByMember.get(member.id) || 0)}</td>
                     <td className="font-semibold">{formatRwf(member.amountPaid)}</td>
                     <td>
                       <div className="flex gap-2">
