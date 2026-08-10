@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowRight, Banknote, CalendarCheck2, Clock3, Flame, Sparkles, TrendingUp, UserPlus, Users } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
+import { ACTIVE_MEMBER_STATUSES } from "@/lib/constants";
 import { getDb } from "@/lib/db";
 import { formatDate, formatRwf, leadDisplayName } from "@/lib/utils";
 
@@ -14,9 +15,9 @@ export default async function DashboardPage() {
   const db = getDb();
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const [total, newLeads, hot, visits, paid, followUps, revenue, packageGroups, recent] = await db.$transaction([
+  const [total, newLeads, hot, visits, activeMembers, followUps, revenue, packageGroups, recent] = await db.$transaction([
     db.lead.count(), db.lead.count({ where: { status: "New Lead" } }), db.lead.count({ where: { status: "Hot Lead" } }),
-    db.lead.count({ where: { status: "Visit Scheduled" } }), db.lead.count({ where: { paymentStatus: "Paid" } }),
+    db.lead.count({ where: { status: "Visit Scheduled" } }), db.lead.count({ where: { status: { in: [...ACTIVE_MEMBER_STATUSES] } } }),
     db.lead.count({ where: { followUpDate: { gte: startOfDay(), lte: endOfDay() } } }),
     db.payment.aggregate({ where: { paymentDate: { gte: monthStart } }, _sum: { amount: true } }),
     db.payment.groupBy({ by: ["packageId"], where: { paymentDate: { gte: monthStart } }, orderBy: { packageId: "asc" }, _sum: { amount: true }, _count: true }),
@@ -28,7 +29,7 @@ export default async function DashboardPage() {
   const metrics = [
     ["Total leads", total, Users, "text-blue-700 bg-blue-50"], ["New leads", newLeads, UserPlus, "text-violet-700 bg-violet-50"],
     ["Hot leads", hot, Flame, "text-orange-700 bg-orange-50"], ["Visit scheduled", visits, CalendarCheck2, "text-cyan-700 bg-cyan-50"],
-    ["Paid customers", paid, Banknote, "text-emerald-700 bg-emerald-50"], ["Follow-up today", followUps, Clock3, "text-amber-700 bg-amber-50"],
+    ["Active members", activeMembers, Banknote, "text-emerald-700 bg-emerald-50"], ["Follow-up today", followUps, Clock3, "text-amber-700 bg-amber-50"],
   ] as const;
 
   return <>

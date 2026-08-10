@@ -8,7 +8,7 @@ import { leadSchema, paymentSchema, visitSchema } from "@/lib/validation";
 import { VISIT_STATUSES } from "@/lib/constants";
 
 function refreshCrm() {
-  ["/", "/leads", "/follow-ups", "/visits", "/payments", "/packages", "/lead-assistant"].forEach((path) => revalidatePath(path));
+  ["/", "/leads", "/members", "/follow-ups", "/visits", "/payments", "/packages", "/lead-assistant"].forEach((path) => revalidatePath(path));
 }
 
 export async function saveLead(input: unknown) {
