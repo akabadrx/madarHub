@@ -7,6 +7,9 @@ export const LEAD_STATUSES = [
   "Day Pass Lead", "Lost",
 ] as const;
 
+/** Statuses that represent an ongoing coworking membership, not a one-off day pass. */
+export const ACTIVE_MEMBER_STATUSES = ["Paid Monthly", "Active Member"] as const;
+
 export const LEAD_TYPES = [
   "General Coworking Lead", "Day Pass Lead", "Monthly Fixed Desk Lead",
   "Student Study Lead", "Meeting Room Lead", "Training Room Lead",

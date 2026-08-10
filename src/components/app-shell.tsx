@@ -3,12 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { BarChart3, CalendarDays, CreditCard, LayoutDashboard, LogOut, Menu, MessageSquareText, Package, Settings, Users, X, Clock3, Sparkles } from "lucide-react";
+import { BarChart3, CalendarDays, CreditCard, LayoutDashboard, LogOut, Menu, MessageSquareText, Package, Settings, UserRoundCheck, Users, X, Clock3, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { logout } from "@/app/auth-actions";
 
 const links = [
-  ["Dashboard", "/", LayoutDashboard], ["Leads", "/leads", Users], ["Lead Assistant", "/lead-assistant", Sparkles],
+  ["Dashboard", "/", LayoutDashboard], ["Leads", "/leads", Users], ["Active Members", "/members", UserRoundCheck], ["Lead Assistant", "/lead-assistant", Sparkles],
   ["Follow-ups", "/follow-ups", Clock3],
   ["Visits", "/visits", CalendarDays], ["Payments", "/payments", CreditCard], ["Packages", "/packages", Package],
   ["Message Templates", "/templates", MessageSquareText], ["Settings", "/settings", Settings],
