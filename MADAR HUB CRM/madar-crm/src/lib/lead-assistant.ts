@@ -100,7 +100,6 @@ export async function analyzeLeadConversation({
   const parsed = await callClaudeJson({
     system: buildLeadAssistantPrompt(packages),
     userMessage,
-    temperature: aiConfig.temperature,
     maxTokens: aiConfig.maxTokens,
     jsonSchema: outputJsonSchema(packages),
   });
