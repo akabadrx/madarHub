@@ -37,8 +37,10 @@ function outputJsonSchema(packages: AssistantPackage[]) {
       leadStatus: { type: "string", enum: LEAD_STATUS_ENUMS },
       interest: { type: ["string", "null"] },
       suggestedPackageSlug: {
-        type: ["string", "null"],
-        enum: [...packages.map((pkg) => pkg.slug), null],
+        anyOf: [
+          { type: "string", enum: packages.map((pkg) => pkg.slug) },
+          { type: "null" },
+        ],
       },
       suggestedPackageReason: { type: ["string", "null"] },
       budgetMentioned: { type: ["string", "null"] },
