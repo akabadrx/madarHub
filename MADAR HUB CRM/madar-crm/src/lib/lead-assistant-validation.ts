@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const analyzeInputSchema = z.object({
-  chat: z.string().trim().min(10, "Paste at least 10 characters of the WhatsApp conversation."),
+  chat: z.string().trim().min(1, "Paste the newest WhatsApp message.").max(100000),
   followUpDate: z.string().nullable().optional(),
   previousAnalysis: z.lazy(() => analyzeOutputSchema).optional(),
 });

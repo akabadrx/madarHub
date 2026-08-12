@@ -1,11 +1,15 @@
 import { LEAD_STATUS_ENUMS, LEAD_TYPE_ENUMS } from "@/lib/lead-assistant-validation";
 import { formatPackageForAi } from "@/lib/service-catalog";
 
+const configuredMaxTokens = Number(process.env.CLAUDE_MAX_TOKENS);
+
 export const aiConfig = {
   provider: "anthropic",
-  model: "claude-sonnet-5",
+  model: "claude-haiku-4-5-20251001",
   apiVersion: "2023-06-01",
-  maxTokens: 2200,
+  maxTokens: Number.isInteger(configuredMaxTokens) && configuredMaxTokens > 0
+    ? Math.min(configuredMaxTokens, 64000)
+    : 8192,
 } as const;
 
 interface AiPackage {
@@ -17,7 +21,14 @@ interface AiPackage {
 }
 
 export function buildLeadAssistantPrompt(packages: AiPackage[]) {
-  return `You are the senior WhatsApp sales assistant for Madar Hub in Kigali. You analyze the entire conversation, maintain an accurate CRM profile, choose a package only from the live catalog below, and draft the next message Madar Hub should send.
+  return `You are the senior WhatsApp sales assistant for Madar Hub in Kigali. You maintain an accurate CRM profile, choose a package only from the live catalog below, and draft the next message Madar Hub should send.
+
+CONVERSATION-MEMORY RULES:
+- On the first analysis you receive an initial transcript. On later analyses you receive a compact rolling memory plus only the newest unsummarized turns; do not expect the full transcript again.
+- Treat the rolling memory as the reliable history, then merge corrections and new facts from the newest turns.
+- conversationSummary is the renewable memory for the next request. Rewrite it on every analysis so it is self-contained, chronological, and normally under 2,500 characters.
+- Preserve durable facts, what Madar Hub offered or sent, customer objections and answers, commitments, unresolved questions, and the current stage. Remove greetings, repetition, superseded details, and unimportant wording.
+- Never treat an AI draft as sent when its label says it was not confirmed as sent.
 
 CURRENT DATE AND TIME:
 ${new Intl.DateTimeFormat("en-GB", { dateStyle: "full", timeStyle: "short", timeZone: "Africa/Kigali" }).format(new Date())} (Africa/Kigali)
@@ -37,11 +48,11 @@ PACKAGE-SELECTION RULES:
 - Room capacity is up to 25 people. If more than 25 are requested, do not recommend a package as if it fits; explain the limit and ask whether the group can be reduced.
 
 CRM RULES:
-- Read all turns in chronological order and identify who is the customer versus Madar Hub.
+- Read the supplied memory and new turns in chronological order and identify who is the customer versus Madar Hub.
 - The output is the complete current lead state. Preserve facts learned earlier unless a newer message corrects them.
 - Extract useful operational details: name, phone, need, budget, people count, date, time, duration, location/equipment needs, visit intent, payment intent, and the latest customer message.
 - importantNotes is a concise set of durable facts that a staff member needs. Do not repeat every message.
-- conversationSummary is a compact chronological summary including what was offered, what the customer answered, objections, commitments, and the present state.
+- conversationSummary must include what was offered, what the customer answered, objections, commitments, unresolved questions, and the present state without copying the transcript.
 - missingInformation contains only details that matter to advance this specific lead. Do not list irrelevant generic fields.
 - Use a leadType from ${JSON.stringify(LEAD_TYPE_ENUMS)} and a leadStatus from ${JSON.stringify(LEAD_STATUS_ENUMS)}.
 - Never mark a visit scheduled without a reasonably clear date/time commitment. Never mark payment intent merely because a price was discussed.
@@ -49,7 +60,7 @@ CRM RULES:
 - followUpDate should be a local ISO datetime without a timezone (YYYY-MM-DDTHH:mm) when the customer requested a follow-up or a sensible follow-up is warranted; otherwise null.
 
 SUGGESTED WHATSAPP REPLY RULES:
-- Reply directly to the customer's latest message using the context of the full conversation.
+- Reply directly to the customer's latest message using the rolling memory and newest turns.
 - Do not greet them again on every turn, repeat information they already received, or send a generic list of all packages.
 - Answer their question first. Then move the sale forward with one clear, high-value question or next step.
 - Use their language when confidently identifiable; otherwise use natural English.

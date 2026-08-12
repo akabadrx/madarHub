@@ -31,7 +31,9 @@ CRM_AUTH_SECRET="a-long-random-string-used-to-sign-sessions"
 ANTHROPIC_API_KEY="sk-ant-..."
 
 # Optional overrides
-CLAUDE_MODEL="claude-sonnet-5"
+CLAUDE_MODEL="claude-haiku-4-5-20251001"
+# Output ceiling; Haiku 4.5 supports up to 64k. The CRM normally uses far less.
+CLAUDE_MAX_TOKENS="8192"
 # ANTHROPIC_BASE_URL="https://api.anthropic.com"
 ```
 
@@ -102,6 +104,7 @@ leads, payments, visits, notes, or conversation history.
 - Paste an initial WhatsApp transcript to extract and review the important lead fields.
 - Package recommendations are constrained to active CRM packages and stored by package ID.
 - Paste each new customer reply to update the lead and generate the next contextual response.
+- The full transcript is sent only for the initial import. Every later turn rewrites a compact rolling summary and sends that memory plus only the newest exchange, keeping long chats fast and inexpensive.
 - Customer messages, AI drafts, and messages marked as sent are recorded separately in the lead timeline.
 - On an existing lead, use **Mark as sent** after sending an edited reply so the next turn uses the exact wording the customer received.
 

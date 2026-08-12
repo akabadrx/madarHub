@@ -25,6 +25,40 @@ export const packageForClient = (pkg: AssistantPackage) => ({
   description: pkg.description,
 });
 
+const clipMemoryText = (value: string | null | undefined, maxLength = 4000) => {
+  if (!value) return null;
+  const normalized = value.trim();
+  if (normalized.length <= maxLength) return normalized;
+  return `${normalized.slice(0, maxLength - 1)}…`;
+};
+
+function previousAnalysisMemory(previous: AnalyzeOutput) {
+  return {
+    conversationSummary: clipMemoryText(previous.conversationSummary, 6000),
+    customerName: previous.customerName,
+    phone: previous.phone,
+    latestCustomerMessage: clipMemoryText(previous.latestMessage, 1200),
+    language: previous.languageDetected,
+    leadType: previous.leadType,
+    leadStatus: previous.leadStatus,
+    interest: previous.interest,
+    suggestedPackageSlug: previous.suggestedPackageSlug,
+    suggestedPackageReason: clipMemoryText(previous.suggestedPackageReason, 1200),
+    budgetMentioned: previous.budgetMentioned,
+    numberOfPeople: previous.numberOfPeople,
+    requestedDate: previous.requestedDate,
+    requestedTime: previous.requestedTime,
+    visitIntent: previous.visitIntent,
+    paymentIntent: previous.paymentIntent,
+    locationRequest: previous.locationRequest,
+    equipmentRequest: previous.equipmentRequest,
+    importantNotes: clipMemoryText(previous.importantNotes, 2000),
+    unresolvedInformation: previous.missingInformation.slice(0, 10),
+    nextAction: clipMemoryText(previous.nextAction, 1200),
+    followUpDate: previous.followUpDate,
+  };
+}
+
 function outputJsonSchema(packages: AssistantPackage[]) {
   return {
     type: "object",
@@ -76,12 +110,14 @@ export async function analyzeLeadConversation({
   conversation,
   packages,
   existingLeadContext,
+  rollingSummary,
   previousAnalysis,
   followUpDate,
 }: {
   conversation: string;
   packages: AssistantPackage[];
   existingLeadContext?: string;
+  rollingSummary?: string | null;
   previousAnalysis?: AnalyzeOutput;
   followUpDate?: string | null;
 }) {
@@ -90,11 +126,15 @@ export async function analyzeLeadConversation({
   }
 
   const validSlugs = new Set(packages.map((pkg) => pkg.slug));
+  const compactMemory = previousAnalysis
+    ? JSON.stringify(previousAnalysisMemory(previousAnalysis))
+    : clipMemoryText(rollingSummary, 6000);
+  const isIncremental = Boolean(compactMemory || existingLeadContext);
   const userMessage = [
     existingLeadContext ? `EXISTING CRM PROFILE:\n${existingLeadContext}` : null,
-    previousAnalysis ? `PREVIOUS ANALYSIS TO PRESERVE OR CORRECT:\n${JSON.stringify(previousAnalysis)}` : null,
+    compactMemory ? `ROLLING CONVERSATION MEMORY — PRESERVE OR CORRECT:\n${compactMemory}` : null,
     followUpDate ? `STAFF-SELECTED FOLLOW-UP DATE:\n${followUpDate}` : null,
-    `FULL CONVERSATION IN CHRONOLOGICAL ORDER:\n${conversation}`,
+    `${isIncremental ? "NEW UNSUMMARIZED TURN(S) ONLY" : "INITIAL TRANSCRIPT IN CHRONOLOGICAL ORDER"}:\n${conversation}`,
   ].filter(Boolean).join("\n\n---\n\n");
 
   const parsed = await callClaudeJson({

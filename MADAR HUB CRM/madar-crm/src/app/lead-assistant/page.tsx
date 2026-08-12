@@ -147,12 +147,12 @@ export default function LeadAssistantPage() {
       return;
     }
     const assistantReply = result.suggestedReply.trim();
-    const nextTranscript = [
-      fullTranscript,
+    const newTurns = [
       assistantReply ? `Madar Hub:\n${assistantReply}` : null,
       `Customer:\n${customerMessage}`,
     ].filter(Boolean).join("\n\n");
-    if (await requestAnalysis(nextTranscript, result)) {
+    if (await requestAnalysis(newTurns, result)) {
+      const nextTranscript = [fullTranscript, newTurns].filter(Boolean).join("\n\n");
       setTurns((current) => [
         ...current,
         ...(assistantReply ? [{ role: "assistant" as const, content: assistantReply }] : []),
@@ -203,12 +203,12 @@ export default function LeadAssistantPage() {
         <PageHeader
           eyebrow="AI sales workspace"
           title="WhatsApp Lead Assistant"
-          description="Paste the conversation once. Claude will extract the lead, choose from the live CRM packages, and draft the next contextual reply."
+          description="Paste the conversation once. Haiku will extract the lead, choose from the live CRM packages, and create compact rolling memory for future replies."
         />
         <div className="card p-5 sm:p-7">
           <div className="mb-4 flex items-start gap-3 rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm text-blue-900">
             <Bot className="mt-0.5 shrink-0" size={19} />
-            <p>Include both sides of the chat when possible. After the first analysis, you can paste each new customer reply below the generated reply and continue the same conversation.</p>
+            <p>Include both sides of the chat when possible. After the first analysis, only the compact memory and each newest exchange are sent to Haiku; the full transcript remains stored for your records.</p>
           </div>
           <label className="label mb-2">WhatsApp conversation</label>
           <textarea
@@ -263,7 +263,7 @@ export default function LeadAssistantPage() {
 
           <section className="card p-5">
             <div className="mb-3 flex items-center justify-between gap-3">
-              <h2 className="flex items-center gap-2 font-bold text-[#0b1f3a]"><Bot size={19} className="text-[#d4a72c]" />Conversation intelligence</h2>
+              <h2 className="flex items-center gap-2 font-bold text-[#0b1f3a]"><Bot size={19} className="text-[#d4a72c]" />Rolling conversation memory</h2>
               <StatusBadge status={result.leadStatus} />
             </div>
             <p className="text-sm leading-6 text-slate-700">{result.conversationSummary}</p>
@@ -274,7 +274,7 @@ export default function LeadAssistantPage() {
             </div>
             <button className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-slate-600" onClick={() => setShowTranscript((value) => !value)}>
               {showTranscript ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-              {showTranscript ? "Hide" : "Show"} full conversation
+              {showTranscript ? "Hide" : "Show"} stored conversation
             </button>
             {showTranscript ? <pre className="mt-3 max-h-96 overflow-auto whitespace-pre-wrap rounded-xl bg-slate-50 p-4 text-xs leading-5 text-slate-600">{fullTranscript}</pre> : null}
           </section>
