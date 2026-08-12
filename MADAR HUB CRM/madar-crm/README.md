@@ -26,7 +26,18 @@ DATABASE_URL="postgresql://postgres:password@localhost:5432/madar_crm"
 # Auth gate (required — the CRM fails closed if these are unset)
 CRM_PASSWORD="choose-a-strong-shared-password"
 CRM_AUTH_SECRET="a-long-random-string-used-to-sign-sessions"
+
+# Claude-powered lead assistant (optional; mock replies are used when omitted)
+ANTHROPIC_API_KEY="sk-ant-..."
+
+# Optional overrides
+CLAUDE_MODEL="claude-sonnet-5"
+# ANTHROPIC_BASE_URL="https://api.anthropic.com"
 ```
+
+The Lead Assistant requires `ANTHROPIC_API_KEY`. It intentionally returns a
+clear configuration error when Claude is unavailable instead of silently
+falling back to generic mock replies.
 
 Generate a signing secret with:
 
@@ -67,6 +78,32 @@ npm run lint
 npm run build
 npm run db:studio
 ```
+
+## Deploy assistant and package updates
+
+After pulling a release that changes the Prisma schema, apply its production
+migrations before restarting the CRM:
+
+```bash
+cd /var/www/madar-crm
+npm ci
+npx prisma migrate deploy
+npm run db:generate
+npm run build
+pm2 restart madar-crm --update-env
+```
+
+The assistant migration upserts the ten packages published on the Madar Hub
+pricing page and adds structured lead-intelligence fields. It does not delete
+leads, payments, visits, notes, or conversation history.
+
+## Lead Assistant workflow
+
+- Paste an initial WhatsApp transcript to extract and review the important lead fields.
+- Package recommendations are constrained to active CRM packages and stored by package ID.
+- Paste each new customer reply to update the lead and generate the next contextual response.
+- Customer messages, AI drafts, and messages marked as sent are recorded separately in the lead timeline.
+- On an existing lead, use **Mark as sent** after sending an edited reply so the next turn uses the exact wording the customer received.
 
 ## Online payments (Pesapal)
 

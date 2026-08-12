@@ -23,7 +23,8 @@ export const LEAD_SOURCES = [
 
 export const INTERESTS = [
   "Day Pass", "Monthly Fixed Desk", "Private Team Room", "Student Study Space",
-  "Virtual Business Address", "Meeting Room Rental", "Just Visiting", "Not Sure",
+  "Virtual Business Address", "Fixed Desk + Virtual Address", "Meeting Room Rental",
+  "Workshops & Training Room", "Just Visiting", "Not Sure",
 ] as const;
 
 export const PAYMENT_METHODS = ["MoMo Pay", "Cash", "Bank Transfer", "Pesapal", "Other"] as const;
@@ -58,7 +59,7 @@ export const DEFAULT_TEMPLATES = [
   {
     title: "Prices message",
     category: "sales",
-    body: `Here are our current VAT-exclusive packages (18% VAT is added):\n\nCoworking Day Pass: 7,000 RWF/day + VAT\nFixed Desk Monthly Subscription: 100,000 RWF/month + VAT\nPrivate Team Room — Standard: 450,000 RWF/month + VAT, up to 6 members; coffee is not included and is available for 1,500 RWF + VAT per cup instead of 3,000 RWF\nPrivate Team Room — With Coffee: 600,000 RWF/month + VAT, up to 6 members; coffee included\nStudent Study Pass: 3,000 RWF/day + VAT\nVirtual Business Address: 100,000 RWF/month + VAT\nFixed Desk + Virtual Address: 120,000 RWF/month + VAT\nMeeting Room: 20,000 RWF + VAT/up to 4 hours; 30,000 RWF + VAT/up to 6 hours; or 40,000 RWF + VAT/full day up to 12 hours\n\nWould you like to visit first or reserve a space?`,
+    body: `Here are our current VAT-exclusive packages (18% VAT is added):\n\nCoworking Day Pass: 7,000 RWF/day + VAT\nFixed Desk Monthly Subscription: 100,000 RWF/month + VAT\nPrivate Team Room — Standard: 450,000 RWF/month + VAT, up to 6 members; coffee is not included and is available for 1,500 RWF + VAT per cup instead of 3,000 RWF\nPrivate Team Room — With Coffee: 600,000 RWF/month + VAT, up to 6 members; coffee included\nStudent Meeting Room Day Pass: 3,000 RWF/day + VAT\nVirtual Address / Business Address Support: 100,000 RWF/month + VAT\nFixed Desk + Virtual Address Package: 120,000 RWF/month + VAT\nMeeting Room: 20,000 RWF + VAT/up to 4 hours; 30,000 RWF + VAT/up to 6 hours\nWorkshops & Training Room: 40,000 RWF + VAT/full day up to 12 hours, including 10 cups of coffee\n\nWould you like to visit first or reserve a space?`,
   },
   {
     title: "Visit message",

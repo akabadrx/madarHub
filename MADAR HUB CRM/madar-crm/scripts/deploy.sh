@@ -45,7 +45,7 @@ info "Node.js version: $(node -v)"
 # Optional: pull latest changes if this is a git repository
 if [ -d ".git" ]; then
     log "Git repository detected. Pulling latest changes..."
-    git pull origin main || warn "Git pull failed, continuing with current code"
+    git pull --ff-only origin main
 else
     info "No .git folder found. Skipping git pull."
 fi
@@ -65,7 +65,7 @@ fi
 # Deploy database migrations (Prisma reads .env automatically)
 if [ -f "prisma/schema.prisma" ]; then
     log "Deploying database migrations..."
-    ./node_modules/.bin/prisma migrate deploy || warn "Database migration deploy failed"
+    ./node_modules/.bin/prisma migrate deploy
 else
     info "No Prisma schema found. Skipping migrations."
 fi

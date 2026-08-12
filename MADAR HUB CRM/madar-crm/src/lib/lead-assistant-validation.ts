@@ -2,8 +2,8 @@ import { z } from "zod";
 
 export const analyzeInputSchema = z.object({
   chat: z.string().trim().min(10, "Paste at least 10 characters of the WhatsApp conversation."),
-  saveSnippet: z.boolean().optional().default(false),
   followUpDate: z.string().nullable().optional(),
+  previousAnalysis: z.lazy(() => analyzeOutputSchema).optional(),
 });
 
 export const LEAD_TYPE_ENUMS = [
@@ -15,8 +15,9 @@ export const LEAD_TYPE_ENUMS = [
 
 export const LEAD_STATUS_ENUMS = [
   "New Lead", "Hot Lead", "Asked Price", "Visit Scheduled",
-  "Follow Up Later", "Training Room Lead", "Private Office Lead",
-  "Monthly Lead", "Day Pass Lead", "Student Lead", "Active Member", "Paid", "Lost",
+  "Visited - Not Paid", "Paid Day Pass", "Paid Monthly", "Team Lead",
+  "Student Lead", "Active Member", "Follow Up Later", "Training Room Lead",
+  "Private Office Lead", "Monthly Lead", "Day Pass Lead", "Lost",
 ] as const;
 
 export const analyzeOutputSchema = z.object({
@@ -27,7 +28,8 @@ export const analyzeOutputSchema = z.object({
   leadType: z.enum(LEAD_TYPE_ENUMS),
   leadStatus: z.enum(LEAD_STATUS_ENUMS),
   interest: z.string().nullable(),
-  suggestedPackage: z.string().nullable(),
+  suggestedPackageSlug: z.string().nullable(),
+  suggestedPackageReason: z.string().nullable(),
   budgetMentioned: z.string().nullable(),
   numberOfPeople: z.number().nullable(),
   requestedDate: z.string().nullable(),
@@ -37,6 +39,8 @@ export const analyzeOutputSchema = z.object({
   locationRequest: z.boolean(),
   equipmentRequest: z.string().nullable(),
   importantNotes: z.string().nullable(),
+  conversationSummary: z.string(),
+  missingInformation: z.array(z.string()),
   nextAction: z.string(),
   followUpDate: z.string().nullable(),
   suggestedReply: z.string(),
