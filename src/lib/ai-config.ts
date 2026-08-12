@@ -5,7 +5,6 @@ export const aiConfig = {
   provider: "anthropic",
   model: "claude-sonnet-5",
   apiVersion: "2023-06-01",
-  temperature: 0.15,
   maxTokens: 2200,
 } as const;
 

@@ -4,7 +4,6 @@ interface ClaudeJsonRequest {
   system: string;
   userMessage: string;
   maxTokens: number;
-  temperature: number;
   jsonSchema: Record<string, unknown>;
 }
 
@@ -22,7 +21,6 @@ export async function callClaudeJson({
   system,
   userMessage,
   maxTokens,
-  temperature,
   jsonSchema,
 }: ClaudeJsonRequest): Promise<unknown> {
   const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
@@ -40,7 +38,6 @@ export async function callClaudeJson({
     body: JSON.stringify({
       model: process.env.CLAUDE_MODEL?.trim() || aiConfig.model,
       max_tokens: maxTokens,
-      temperature,
       system,
       messages: [{ role: "user", content: userMessage }],
       output_config: {
