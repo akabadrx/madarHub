@@ -14,13 +14,6 @@ const replyInputSchema = z.object({
   customerMessage: z.string().trim().min(1, "Paste the customer's latest message."),
 });
 
-const interactionSpeaker: Record<string, string> = {
-  "whatsapp-in": "Customer",
-  "whatsapp-out": "Madar Hub (sent)",
-  "ai-draft": "Madar Hub (AI draft; use as context but do not assume it was sent)",
-  "whatsapp-transcript": "Earlier pasted WhatsApp transcript",
-};
-
 const protectedPaidStatuses = new Set(["Paid Day Pass", "Paid Monthly", "Active Member", "Paid"]);
 
 function changedFields(
@@ -41,7 +34,12 @@ export async function POST(request: Request) {
         where: { id: input.leadId },
         include: {
           suggestedPackage: { select: { slug: true, name: true } },
-          interactions: { orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 50 },
+          interactions: {
+            where: { type: { in: ["whatsapp-out", "ai-draft"] } },
+            orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+            take: 1,
+            select: { type: true, content: true },
+          },
         },
       }),
       db.package.findMany({
@@ -55,13 +53,13 @@ export async function POST(request: Request) {
     }
 
     const packages = packageRows.map((pkg) => ({ ...pkg, slug: pkg.slug! })) satisfies AssistantPackage[];
-    const history = lead.interactions
-      .slice()
-      .reverse()
-      .filter((item) => interactionSpeaker[item.type])
-      .map((item) => `${interactionSpeaker[item.type]}:\n${item.content}`)
-      .join("\n\n");
-    const conversation = [history, `Customer (new message):\n${input.customerMessage}`]
+    const latestAssistantTurn = lead.interactions[0];
+    const assistantContext = latestAssistantTurn
+      ? latestAssistantTurn.type === "whatsapp-out"
+        ? `Madar Hub (confirmed sent):\n${latestAssistantTurn.content}`
+        : `Madar Hub (latest AI draft; not confirmed sent):\n${latestAssistantTurn.content}`
+      : null;
+    const conversation = [assistantContext, `Customer (new message):\n${input.customerMessage}`]
       .filter(Boolean)
       .join("\n\n---\n\n");
     const existingLeadContext = [
@@ -83,10 +81,14 @@ export async function POST(request: Request) {
       `Location request: ${lead.locationRequest}`,
       `Staff notes: ${lead.notes || "None"}`,
       `Important lead facts: ${lead.importantNotes || "None"}`,
-      `Prior AI summary: ${lead.aiSummary || "None"}`,
     ].join("\n");
 
-    const result = await analyzeLeadConversation({ conversation, packages, existingLeadContext });
+    const result = await analyzeLeadConversation({
+      conversation,
+      packages,
+      existingLeadContext,
+      rollingSummary: lead.aiSummary,
+    });
     const suggestedPackage = result.suggestedPackageSlug
       ? packages.find((pkg) => pkg.slug === result.suggestedPackageSlug)
       : lead.suggestedPackage

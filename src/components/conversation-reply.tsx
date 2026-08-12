@@ -106,7 +106,7 @@ export function ConversationReply({ leadId, leadPhone, leadName }: ConversationR
         Continue WhatsApp conversation
       </h2>
       <p className="mb-4 text-sm leading-6 text-slate-500">
-        Paste only {leadName ? `${leadName}'s` : "the customer's"} newest message. Claude reads the saved conversation, updates the lead, and drafts the next reply.
+        Paste only {leadName ? `${leadName}'s` : "the customer's"} newest message. Haiku uses the renewable conversation memory and latest exchange, updates the lead, and drafts the next reply.
       </p>
 
       <textarea
