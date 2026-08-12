@@ -58,7 +58,7 @@ function outputJsonSchema(packages: AssistantPackage[]) {
       followUpDate: { type: ["string", "null"] },
       suggestedReply: { type: "string" },
       followUpMessage: { type: "string" },
-      confidenceScore: { type: "number", minimum: 0, maximum: 1 },
+      confidenceScore: { type: "number" },
     },
     required: [
       "customerName", "phone", "latestMessage", "languageDetected", "leadType", "leadStatus",
