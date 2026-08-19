@@ -42,10 +42,14 @@ if [ "$NODE_VERSION_CURRENT" -lt "$NODE_VERSION_REQUIRED" ]; then
 fi
 info "Node.js version: $(node -v)"
 
-# Optional: pull latest changes if this is a git repository
+# Optional: pull latest changes if this is a git repository. This directory
+# tracks the "crm-deploy" branch, which mirrors just the MADAR HUB CRM/madar-crm
+# subfolder of the monorepo's main branch (kept in sync via
+# `git subtree push --prefix="MADAR HUB CRM/madar-crm" origin crm-deploy`,
+# run from the monorepo root before deploying).
 if [ -d ".git" ]; then
     log "Git repository detected. Pulling latest changes..."
-    git pull --ff-only origin main
+    git pull --ff-only origin crm-deploy
 else
     info "No .git folder found. Skipping git pull."
 fi
