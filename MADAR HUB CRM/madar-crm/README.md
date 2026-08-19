@@ -48,8 +48,9 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
 ```
 
 Access is a single shared password protected by a signed, HttpOnly session cookie
-(7-day expiry). All pages and server actions require sign-in; the cron digest route
-is exempt because it uses its own `CRON_SECRET` bearer token.
+(7-day expiry). All pages and server actions require sign-in; the cron notification
+routes (`daily-digest`, `payment-reminders`) are exempt because they use their own
+`CRON_SECRET` bearer token.
 
 3. Create the database schema and generate Prisma Client:
 
@@ -115,6 +116,43 @@ callback, and IPN endpoints are hosted here under `/api/public/pesapal/*` and
 are exempt from the password gate (see `src/proxy.ts`). See
 [PESAPAL_GUIDE.md](./PESAPAL_GUIDE.md) for credentials, env vars, and IPN
 registration.
+
+## Membership payment status and reminders
+
+Monthly members (any lead on a package with `billingType: "monthly"`) get a
+derived, always-up-to-date "Next payment date" and payment status computed
+from their most recent payment — no separate field to keep in sync:
+
+- **Active** — today is on or before `last payment + 1 month`.
+- **Delayed Payment** — up to 7 days past that date (a grace period); the
+  member's card/row shows the amount due.
+- **Suspended** — more than 7 days past the next payment date.
+
+This shows up as a "Next payment" / "Payment status" column on
+[Active Members](src/app/members/page.tsx) and a "Membership payment" card on
+each lead's detail page. The logic lives in
+[src/lib/membership.ts](src/lib/membership.ts).
+
+To email `contact@madarorbit.com` whenever a monthly member enters the grace
+period, trigger `POST /api/notifications/payment-reminders` on a daily
+schedule (e.g. a VPS crontab entry, alongside `daily-digest`):
+
+```bash
+curl -s -X POST https://madarorbit.com/crm/api/notifications/payment-reminders \
+  -H "Authorization: Bearer $CRON_SECRET"
+```
+
+It re-sends daily for as long as a member stays in the grace period, mirroring
+the follow-up digest's behavior. Add these to `.env`:
+
+```env
+RESEND_API_KEY="re_..."
+CRON_SECRET="a-long-random-string-shared-with-your-cron-caller"
+NOTIFICATION_EMAIL="staff-inbox@example.com"      # daily-digest recipient
+PAYMENT_REMINDER_EMAIL="contact@madarorbit.com"    # payment-reminders recipient (defaults to this)
+EMAIL_FROM="Madar Hub CRM <onboarding@resend.dev>"
+CRM_BASE_URL="https://madarorbit.com/crm"
+```
 
 ## MVP behavior
 

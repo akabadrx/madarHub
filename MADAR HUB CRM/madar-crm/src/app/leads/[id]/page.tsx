@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Bot, CalendarDays, CreditCard, Edit3, Languages, Mail, MapPin, MessageCircle, Phone, Sparkles, Tag, Users, Wrench } from "lucide-react";
+import { Bot, CalendarClock, CalendarDays, CreditCard, Edit3, Languages, Mail, MapPin, MessageCircle, Phone, Sparkles, Tag, Users, Wrench } from "lucide-react";
 import { CopyButton } from "@/components/copy-button";
 import { NoteForm } from "@/components/note-form";
 import { PageHeader } from "@/components/page-header";
@@ -10,6 +10,7 @@ import { StatusBadge } from "@/components/status-badge";
 import { VisitForm } from "@/components/visit-form";
 import { ConversationReply } from "@/components/conversation-reply";
 import { getDb } from "@/lib/db";
+import { getMembershipPaymentStatus } from "@/lib/membership";
 import { formatDate, formatRwf, leadDisplayName, whatsappUrl } from "@/lib/utils";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) { const { id } = await params; const lead = await getDb().lead.findUnique({ where: { id }, select: { name: true, phone: true } }); return { title: lead ? leadDisplayName(lead.name, lead.phone) : "Lead" }; }
@@ -25,6 +26,9 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
   const name = leadDisplayName(lead.name, lead.phone);
   const option = [{ id: lead.id, name }];
   const aiBadge = lead.aiConfidence != null ? Math.round(lead.aiConfidence * 100) : null;
+  const latestPayment = lead.payments[0];
+  const memberPackage = latestPayment?.package || lead.suggestedPackage;
+  const membershipInfo = getMembershipPaymentStatus(memberPackage, latestPayment?.paymentDate);
   return <>
     <PageHeader eyebrow="Lead profile" title={name} description={`${lead.source} · Created ${formatDate(lead.createdAt)}`} action={<div className="flex flex-wrap gap-2"><a href={whatsappUrl(lead.phone)} target="_blank" rel="noreferrer" className="btn bg-[#168b5b] text-white"><MessageCircle size={17} />WhatsApp</a><Link href="/lead-assistant" className="btn btn-outline"><Bot size={16} />AI Lead Assistant</Link><Link href={`/leads/${lead.id}/edit`} className="btn btn-outline"><Edit3 size={16} />Edit</Link></div>} />
     {lead.aiSummary && <div className="card flex items-start gap-4 border-[#eadcae] bg-[#fffaf0] p-5"><div className="rounded-xl bg-[#fff5d8] p-2.5 text-[#9a7110]"><Sparkles size={20} /></div><div className="min-w-0 flex-1"><p className="text-xs font-bold uppercase tracking-wide text-[#9a7110]">Rolling AI memory</p><p className="mt-1 text-sm leading-6 text-slate-700">{lead.aiSummary}</p></div>{aiBadge != null && <span className="shrink-0 rounded-full bg-[#0b1f3a] px-2.5 py-1 text-xs font-semibold text-white">{aiBadge}%</span>}</div>}
@@ -37,6 +41,7 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
           <div className="rounded-xl bg-slate-50 p-4"><CalendarDays className="mb-2 text-[#9a7110]" size={18} /><p className="text-xs text-slate-500">Next visit</p><p className="mt-1 font-semibold">{formatDate(lead.visitDate, true)}</p></div>
           <div className="rounded-xl bg-slate-50 p-4"><Mail className="mb-2 text-[#9a7110]" size={18} /><p className="text-xs text-slate-500">Follow-up</p><p className="mt-1 font-semibold">{formatDate(lead.followUpDate, true)}</p></div>
           <div className="rounded-xl bg-slate-50 p-4"><MapPin className="mb-2 text-[#9a7110]" size={18} /><p className="text-xs text-slate-500">Paid to date</p><p className="mt-1 font-semibold">{formatRwf(lead.amountPaid)}</p></div>
+          {membershipInfo && <div className="rounded-xl bg-slate-50 p-4"><CalendarClock className="mb-2 text-[#9a7110]" size={18} /><p className="text-xs text-slate-500">Next payment</p><p className="mt-1 font-semibold">{formatDate(membershipInfo.nextPaymentDate)}</p></div>}
         </div>
           {(lead.nextAction || lead.requestedDate || lead.numberOfPeople || lead.equipmentRequest || lead.language) && <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {lead.nextAction && <div className="rounded-xl border border-[#eadcae] bg-[#fffaf0] p-4 text-sm leading-6 sm:col-span-2"><Sparkles className="mb-2 text-[#9a7110]" size={18} /><p className="text-xs text-[#9a7110]">Next action</p><p className="mt-1 font-semibold text-[#0b1f3a]">{lead.nextAction}</p></div>}
@@ -53,6 +58,7 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
         <section className="card p-5"><h2 className="mb-4 font-bold text-[#0b1f3a]">Payment history</h2><PaymentForm leads={option} packages={packages} defaultLeadId={lead.id} /><div className="mt-5 table-wrap"><table className="data-table"><thead><tr><th>Date</th><th>Package</th><th>Method</th><th>Amount</th></tr></thead><tbody>{lead.payments.map((payment) => <tr key={payment.id}><td>{formatDate(payment.paymentDate)}</td><td>{payment.package?.name || "Unassigned"}</td><td>{payment.paymentMethod}</td><td className="font-semibold">{formatRwf(payment.amount)}</td></tr>)}</tbody></table></div></section>
       </div>
       <aside className="space-y-4"><section className="card p-5"><h2 className="font-bold text-[#0b1f3a]">Current stage</h2><div className="mt-3"><StatusBadge status={lead.status} /></div><p className="mt-3 text-sm leading-6 text-slate-500">Last updated {formatDate(lead.updatedAt, true)}.</p></section>
+        {membershipInfo && <section className="card p-5"><h2 className="font-bold text-[#0b1f3a]">Membership payment</h2><div className="mt-3"><StatusBadge status={membershipInfo.status} /></div><p className="mt-3 text-sm leading-6 text-slate-500">Next payment due {formatDate(membershipInfo.nextPaymentDate)}.</p>{membershipInfo.dueAmount > 0 && <p className="mt-1 text-sm font-semibold text-rose-600">{formatRwf(membershipInfo.dueAmount)} due{membershipInfo.status === "Delayed Payment" ? ` · ${membershipInfo.daysUntilSuspension} day${membershipInfo.daysUntilSuspension === 1 ? "" : "s"} left before suspension` : ""}</p>}</section>}
         <ConversationReply leadId={lead.id} leadPhone={lead.phone} leadName={lead.name} />
         <section className="card p-5"><h2 className="mb-1 font-bold text-[#0b1f3a]">Quick messages</h2><p className="mb-4 text-sm text-slate-500">The lead name is inserted automatically.</p><div className="space-y-3">{templates.map((template) => { const message = template.body.replaceAll("{{name}}", lead.name ? `${lead.name},` : "there,"); return <div className="rounded-xl border border-slate-200 p-3" key={template.id}><p className="mb-2 text-sm font-semibold">{template.title}</p><p className="line-clamp-3 whitespace-pre-line text-xs leading-5 text-slate-500">{message}</p><div className="mt-3 flex flex-wrap gap-2"><CopyButton text={message} /><a className="btn btn-outline" href={whatsappUrl(lead.phone, message)} target="_blank" rel="noreferrer"><MessageCircle size={15} />Open</a></div></div>; })}</div></section>
       </aside>

@@ -48,6 +48,9 @@ export const STATUS_STYLES: Record<string, string> = {
   "Day Pass Lead": "bg-amber-50 text-amber-700 ring-amber-200",
   "Paid": "bg-green-50 text-green-700 ring-green-200",
   "Lost": "bg-rose-50 text-rose-700 ring-rose-200",
+  "Active": "bg-green-50 text-green-700 ring-green-200",
+  "Delayed Payment": "bg-amber-50 text-amber-800 ring-amber-200",
+  "Suspended": "bg-rose-50 text-rose-700 ring-rose-200",
 };
 
 export const DEFAULT_TEMPLATES = [
