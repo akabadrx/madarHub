@@ -68,7 +68,7 @@ export default async function MembersPage({
   );
   const needsPayment = activeMembers.filter((member) => {
     const pkg = member.payments[0]?.package || member.suggestedPackage;
-    const info = getMembershipPaymentStatus(pkg, member.payments[0]?.paymentDate, now);
+    const info = getMembershipPaymentStatus(pkg, member.payments[0]?.paymentDate, member.payments[0]?.amount, now);
     return info?.status === "Delayed Payment" || info?.status === "Suspended";
   }).length;
   const metrics = [
@@ -130,7 +130,7 @@ export default async function MembersPage({
               {members.map((member) => {
                 const latestPayment = member.payments[0];
                 const memberPackage = latestPayment?.package || member.suggestedPackage;
-                const membershipInfo = getMembershipPaymentStatus(memberPackage, latestPayment?.paymentDate, now);
+                const membershipInfo = getMembershipPaymentStatus(memberPackage, latestPayment?.paymentDate, latestPayment?.amount, now);
                 return (
                   <tr key={member.id}>
                     <td>
