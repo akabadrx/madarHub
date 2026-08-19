@@ -148,7 +148,7 @@ async function fetchDelayedPaymentMembers(): Promise<DelayedMember[]> {
   for (const member of members) {
     const latestPayment = member.payments[0];
     const memberPackage = latestPayment?.package || member.suggestedPackage;
-    const info = getMembershipPaymentStatus(memberPackage, latestPayment?.paymentDate);
+    const info = getMembershipPaymentStatus(memberPackage, latestPayment?.paymentDate, latestPayment?.amount);
     if (info?.status === "Delayed Payment") {
       delayed.push({ id: member.id, name: member.name, phone: member.phone, info });
     }
