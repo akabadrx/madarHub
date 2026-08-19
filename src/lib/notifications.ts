@@ -1,5 +1,7 @@
 import { getDb } from "@/lib/db";
-import { leadDisplayName, formatDate } from "@/lib/utils";
+import { ACTIVE_MEMBER_STATUSES } from "@/lib/constants";
+import { getMembershipPaymentStatus, type MembershipPaymentInfo } from "@/lib/membership";
+import { leadDisplayName, formatDate, formatRwf } from "@/lib/utils";
 
 function dayStart(date = new Date()) { const d = new Date(date); d.setHours(0, 0, 0, 0); return d; }
 function dayEnd(date = new Date()) { const d = new Date(date); d.setHours(23, 59, 59, 999); return d; }
@@ -123,4 +125,106 @@ export async function sendFollowUpDigestEmail(opts: { to: string; from: string; 
 
   const data = await response.json();
   return { success: true, sent: true, messageId: data.id, total, overdue: overdue.length, today: today.length };
+}
+
+type DelayedMember = {
+  id: string;
+  name: string | null;
+  phone: string;
+  info: MembershipPaymentInfo;
+};
+
+async function fetchDelayedPaymentMembers(): Promise<DelayedMember[]> {
+  const db = getDb();
+  const members = await db.lead.findMany({
+    where: { status: { in: [...ACTIVE_MEMBER_STATUSES] } },
+    include: {
+      suggestedPackage: true,
+      payments: { include: { package: true }, orderBy: { paymentDate: "desc" }, take: 1 },
+    },
+  });
+
+  const delayed: DelayedMember[] = [];
+  for (const member of members) {
+    const latestPayment = member.payments[0];
+    const memberPackage = latestPayment?.package || member.suggestedPackage;
+    const info = getMembershipPaymentStatus(memberPackage, latestPayment?.paymentDate);
+    if (info?.status === "Delayed Payment") {
+      delayed.push({ id: member.id, name: member.name, phone: member.phone, info });
+    }
+  }
+  return delayed;
+}
+
+function buildPaymentReminderRow(member: DelayedMember, crmBaseUrl: string) {
+  const name = escapeHtml(leadDisplayName(member.name, member.phone));
+  return `<tr>
+    <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;">
+      <a href="${crmBaseUrl}/leads/${member.id}" style="color:#0b1f3a;font-weight:600;text-decoration:none;">${name}</a>
+      <div style="font-size:12px;color:#64748b;margin-top:2px;">${escapeHtml(member.phone)}</div>
+    </td>
+    <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;font-size:13px;color:#475569;">${formatDate(member.info.nextPaymentDate)}</td>
+    <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;font-size:13px;color:#dc2626;font-weight:600;">${member.info.daysUntilSuspension} day${member.info.daysUntilSuspension === 1 ? "" : "s"}</td>
+    <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;font-size:13px;color:#475569;font-weight:600;">${formatRwf(member.info.dueAmount)}</td>
+  </tr>`;
+}
+
+export function buildPaymentReminderHtml(members: DelayedMember[], crmBaseUrl: string) {
+  const dateStr = new Date().toLocaleDateString("en-RW", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+  const table = `<table style="width:100%;border-collapse:collapse;font-size:14px;">
+    <thead><tr style="background:#fffbeb;"><th style="padding:8px 12px;text-align:left;border-bottom:2px solid #fde68a;font-size:12px;text-transform:uppercase;color:#92400e;">Member</th><th style="padding:8px 12px;text-align:left;border-bottom:2px solid #fde68a;font-size:12px;text-transform:uppercase;color:#92400e;">Next payment</th><th style="padding:8px 12px;text-align:left;border-bottom:2px solid #fde68a;font-size:12px;text-transform:uppercase;color:#92400e;">Days left</th><th style="padding:8px 12px;text-align:left;border-bottom:2px solid #fde68a;font-size:12px;text-transform:uppercase;color:#92400e;">Amount due</th></tr></thead>
+    <tbody>${members.map((m) => buildPaymentReminderRow(m, crmBaseUrl)).join("")}</tbody>
+  </table>`;
+
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <div style="max-width:640px;margin:0 auto;padding:24px;">
+    <div style="background:#0b1f3a;border-radius:12px 12px 0 0;padding:24px 28px;">
+      <h1 style="color:#fff;font-size:20px;margin:0;">Madar Hub CRM</h1>
+      <p style="color:#d4a72c;font-size:13px;margin:4px 0 0 0;">Payment reminder</p>
+    </div>
+    <div style="background:#fff;border-radius:0 0 12px 12px;padding:28px;border:1px solid #e2e8f0;border-top:none;">
+      <p style="color:#64748b;font-size:14px;margin:0 0 4px 0;">${dateStr}</p>
+      <p style="color:#0b1f3a;font-size:18px;font-weight:600;margin:0 0 16px 0;">${members.length} member${members.length > 1 ? "s" : ""} must pay within the next week or will be suspended.</p>
+      ${table}
+      <div style="margin-top:32px;padding-top:20px;border-top:1px solid #e2e8f0;">
+        <a href="${crmBaseUrl}/members" style="display:inline-block;background:#d4a72c;color:#0b1f3a;font-weight:600;font-size:14px;padding:10px 24px;border-radius:8px;text-decoration:none;">Open members in CRM</a>
+      </div>
+    </div>
+    <p style="color:#94a3b8;font-size:12px;text-align:center;margin-top:16px;">This is an automated payment reminder from Madar Hub CRM.</p>
+  </div>
+</body></html>`;
+}
+
+export async function sendPaymentReminderEmail(opts: { to: string; from: string; crmBaseUrl: string; resendApiKey: string }) {
+  const delayed = await fetchDelayedPaymentMembers();
+
+  if (delayed.length === 0) {
+    return { success: true, sent: false, message: "No members in the payment grace period. No email sent." };
+  }
+
+  const html = buildPaymentReminderHtml(delayed, opts.crmBaseUrl);
+  const subject = `Madar Hub CRM - ${delayed.length} member${delayed.length > 1 ? "s" : ""} must pay before suspension`;
+
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${opts.resendApiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: opts.from,
+      to: opts.to,
+      subject,
+      html,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new Error(`Resend API error ${response.status}: ${errorBody.slice(0, 300)}`);
+  }
+
+  const data = await response.json();
+  return { success: true, sent: true, messageId: data.id, total: delayed.length };
 }

@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { Banknote, CalendarCheck2, MessageCircle, Plus, Search, UserRoundCheck, Users } from "lucide-react";
+import { AlertTriangle, Banknote, CalendarCheck2, MessageCircle, Plus, Search, UserRoundCheck, Users } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
 import { ACTIVE_MEMBER_STATUSES } from "@/lib/constants";
 import { getDb } from "@/lib/db";
+import { getMembershipPaymentStatus } from "@/lib/membership";
 import { formatDate, formatRwf, leadDisplayName, whatsappUrl } from "@/lib/utils";
 
 export const metadata = { title: "Active Members" };
@@ -65,11 +66,17 @@ export default async function MembersPage({
     (sum, payment) => sum + (payment._sum?.amount || 0),
     0,
   );
+  const needsPayment = activeMembers.filter((member) => {
+    const pkg = member.payments[0]?.package || member.suggestedPackage;
+    const info = getMembershipPaymentStatus(pkg, member.payments[0]?.paymentDate, now);
+    return info?.status === "Delayed Payment" || info?.status === "Suspended";
+  }).length;
   const metrics = [
     ["Active now", activeMembers.length, UserRoundCheck, "text-emerald-700 bg-emerald-50"],
     ["Monthly plans", monthlyPlans, Users, "text-blue-700 bg-blue-50"],
     ["Renewed this month", renewedThisMonth, CalendarCheck2, "text-violet-700 bg-violet-50"],
     ["Monthly revenue", formatRwf(monthlyRevenue), Banknote, "text-amber-700 bg-amber-50"],
+    ["Needs payment", needsPayment, AlertTriangle, "text-rose-700 bg-rose-50"],
   ] as const;
 
   return (
@@ -85,7 +92,7 @@ export default async function MembersPage({
         }
       />
 
-      <section className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         {metrics.map(([label, value, Icon, style]) => (
           <div className="card p-5" key={label}>
             <div className="flex items-start justify-between gap-3">
@@ -117,12 +124,13 @@ export default async function MembersPage({
         <div className="table-wrap">
           <table className="data-table mobile-card-table">
             <thead>
-              <tr><th>Member</th><th>Plan</th><th>Status</th><th>Last payment</th><th>This month</th><th>Total paid</th><th>Actions</th></tr>
+              <tr><th>Member</th><th>Plan</th><th>Status</th><th>Last payment</th><th>Next payment</th><th>Payment status</th><th>This month</th><th>Total paid</th><th>Actions</th></tr>
             </thead>
             <tbody>
               {members.map((member) => {
                 const latestPayment = member.payments[0];
                 const memberPackage = latestPayment?.package || member.suggestedPackage;
+                const membershipInfo = getMembershipPaymentStatus(memberPackage, latestPayment?.paymentDate, now);
                 return (
                   <tr key={member.id}>
                     <td>
@@ -134,6 +142,17 @@ export default async function MembersPage({
                     <td>{memberPackage?.name || member.interest || "Not set"}</td>
                     <td><StatusBadge status={member.status} /></td>
                     <td>{formatDate(latestPayment?.paymentDate)}</td>
+                    <td>{membershipInfo ? formatDate(membershipInfo.nextPaymentDate) : "—"}</td>
+                    <td>
+                      {membershipInfo ? (
+                        <div>
+                          <StatusBadge status={membershipInfo.status} />
+                          {membershipInfo.dueAmount > 0 && (
+                            <p className="mt-1 text-xs font-semibold text-rose-600">{formatRwf(membershipInfo.dueAmount)} due</p>
+                          )}
+                        </div>
+                      ) : "—"}
+                    </td>
                     <td className="font-semibold text-emerald-700">{formatRwf(monthlyRevenueByMember.get(member.id) || 0)}</td>
                     <td className="font-semibold">{formatRwf(member.amountPaid)}</td>
                     <td>
