@@ -56,7 +56,36 @@ and `prisma/seed.ts`), not by name, so prices can be edited in the CRM without
 breaking the public buttons. Every package the pricing page can sell needs a
 `slug` set on its `Package` row.
 
-## 5. Troubleshooting
+## 5. Reconcile abandoned payments (recurring)
+
+Pesapal fires an IPN only when a transaction's status *changes*, and the
+browser callback only runs if the customer returns to the site. A customer who
+walks away from Pesapal's "Payment Processing" page leaves a `PesapalPayment`
+row stuck on `PENDING` with nothing to show for it.
+
+Run the reconciliation sweep on a schedule (every 15 minutes is plenty) to
+re-check those rows against Pesapal:
+
+```bash
+*/15 * * * * /bin/bash /var/www/madar-crm/scripts/pesapal-reconcile-cron.sh >> /var/log/madar-crm-reconcile.log 2>&1
+```
+
+[scripts/pesapal-reconcile-cron.sh](scripts/pesapal-reconcile-cron.sh) reads
+`CRON_SECRET` and `CRM_BASE_URL` from `.env`, so the secret never has to be
+pasted into the crontab, and it logs the sweep's JSON result on every run.
+
+Rows still `PENDING` past the abandon window are marked `ABANDONED` so they
+stop being retried. That status is not final — if Pesapal later reports the
+payment as completed, the IPN still fulfills it normally.
+
+Optional tuning in `.env` (both have sensible defaults):
+
+```env
+PESAPAL_RECONCILE_MIN_AGE_MINUTES="15"   # settling window before polling a checkout
+PESAPAL_ABANDON_AFTER_HOURS="24"         # give up and mark ABANDONED after this
+```
+
+## 6. Troubleshooting
 
 - **"Online payment is not configured yet"** — `MADAR_SITE_URL` or
   `NEXT_PUBLIC_APP_URL` is missing.
@@ -64,4 +93,11 @@ breaking the public buttons. Every package the pricing page can sell needs a
   the IPN URL first (step 3).
 - **Payments stay "Pending" in the CRM** — the IPN likely couldn't reach the
   server (firewall / DNS), or `PESAPAL_IPN_ID` doesn't match what's
-  registered. Re-run step 3.
+  registered. Re-run step 3. If the IPN is healthy, the customer probably
+  abandoned checkout; the step 5 sweep resolves those.
+- **Pesapal shows "Payment Processing" with a blank Payment Method** — no money
+  moved. Pesapal only fills that field once a channel is chosen and a charge is
+  attempted, so the customer never completed the payment leg (a Mobile Money
+  prompt that was never confirmed is the usual cause — note that a Rwandan MoMo
+  prompt cannot be actioned from abroad). The customer has *not* been charged
+  and can safely retry; suggest card if they are outside Rwanda.

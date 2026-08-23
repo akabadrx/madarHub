@@ -135,7 +135,7 @@ model PesapalPayment {
   customerName      String
   customerEmail     String
   customerPhone     String?
-  status            String   @default("PENDING") // PENDING | COMPLETED | FAILED
+  status            String   @default("PENDING") // PENDING | COMPLETED | FAILED | ABANDONED
   pesapalTrackingId String?
   leadId            String?
   lead              Lead?    @relation(fields: [leadId], references: [id])

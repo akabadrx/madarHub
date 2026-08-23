@@ -11,6 +11,8 @@
  *   PESAPAL_IPN_ID (obtained after registering IPN URL)
  */
 
+import { normalizePhone } from "@/lib/utils"
+
 // ─── In-memory token cache ───────────────────────────────────────────────────
 let cachedToken: string | null = null
 let tokenExpiry: number = 0
@@ -159,6 +161,14 @@ export async function submitOrderRequest(params: SubmitOrderParams): Promise<Sub
 
     console.log("[PESAPAL] Submitting order:", params.merchantReference, "Amount:", params.amount, params.currency)
 
+    // Pesapal resolves the mobile-money operator from the billing phone and
+    // country, so both have to be unambiguous. The checkout form asks for a
+    // local number ("078xxxxxxx"), which Pesapal cannot map to a network on its
+    // own — send international digits plus the matching ISO country instead.
+    // Non-Rwandan numbers pass through untouched with the country left blank.
+    const billingPhone = params.customerPhone ? normalizePhone(params.customerPhone) : ""
+    const billingCountryCode = billingPhone.startsWith("250") ? "RW" : ""
+
     const requestBody = {
         id: params.merchantReference,
         currency: params.currency,
@@ -171,8 +181,8 @@ export async function submitOrderRequest(params: SubmitOrderParams): Promise<Sub
             email_address: params.customerEmail,
             first_name: params.customerFirstName || "",
             last_name: params.customerLastName || "",
-            phone_number: params.customerPhone || "",
-            country_code: "",
+            phone_number: billingPhone,
+            country_code: billingCountryCode,
             line_1: "",
             line_2: "",
             city: "",
