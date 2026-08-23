@@ -5,6 +5,7 @@ import { StatusBadge } from "@/components/status-badge";
 import { ACTIVE_MEMBER_STATUSES } from "@/lib/constants";
 import { getDb } from "@/lib/db";
 import { getMembershipPaymentStatus } from "@/lib/membership";
+import { netRevenueAmount } from "@/lib/revenue";
 import { formatDate, formatRwf, leadDisplayName, whatsappUrl } from "@/lib/utils";
 
 export const metadata = { title: "Active Members" };
@@ -35,7 +36,7 @@ export default async function MembersPage({
       orderBy: { updatedAt: "desc" },
     }),
     db.payment.groupBy({
-      by: ["leadId"],
+      by: ["leadId", "packageId"],
       orderBy: { leadId: "asc" },
       where: {
         paymentDate: { gte: monthStart, lte: now },
@@ -55,15 +56,22 @@ export default async function MembersPage({
     : activeMembers;
 
   const monthlyRevenueByMember = new Map(
-    monthlyPayments.map((payment) => [payment.leadId, payment._sum?.amount || 0]),
+    activeMembers.map((member) => [member.id, 0]),
   );
-  const renewedThisMonth = monthlyPayments.length;
+  monthlyPayments.forEach((payment) => {
+    const netAmount = netRevenueAmount(payment._sum?.amount || 0, payment.packageId);
+    monthlyRevenueByMember.set(
+      payment.leadId,
+      (monthlyRevenueByMember.get(payment.leadId) || 0) + netAmount,
+    );
+  });
+  const renewedThisMonth = new Set(monthlyPayments.map((payment) => payment.leadId)).size;
   const monthlyPlans = activeMembers.filter((member) => {
     const pkg = member.payments[0]?.package || member.suggestedPackage;
     return pkg?.billingType === "monthly";
   }).length;
   const monthlyRevenue = monthlyPayments.reduce(
-    (sum, payment) => sum + (payment._sum?.amount || 0),
+    (sum, payment) => sum + netRevenueAmount(payment._sum?.amount || 0, payment.packageId),
     0,
   );
   const needsPayment = activeMembers.filter((member) => {
