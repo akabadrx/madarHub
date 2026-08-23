@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
     const params = new URLSearchParams({
       ref: payment.merchantReference,
       package: payment.packageName,
-      amount: String(payment.amount),
+      amount: String(payment.chargedAmount ?? payment.amount),
     });
 
     if (payment.status === "COMPLETED") {
