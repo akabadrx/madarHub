@@ -49,7 +49,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
 
 Access is a single shared password protected by a signed, HttpOnly session cookie
 (7-day expiry). All pages and server actions require sign-in; the cron notification
-routes (`daily-digest`, `payment-reminders`) are exempt because they use their own
+routes (`daily-digest`, `payment-reminders`, `pesapal-reconcile`) are exempt because they use their own
 `CRON_SECRET` bearer token.
 
 3. Create the database schema and generate Prisma Client:
@@ -153,6 +153,18 @@ PAYMENT_REMINDER_EMAIL="contact@madarorbit.com"    # payment-reminders recipient
 EMAIL_FROM="Madar Hub CRM <onboarding@resend.dev>"
 CRM_BASE_URL="https://madarorbit.com/crm"
 ```
+
+Online Pesapal checkouts need a third, more frequent job. Pesapal only sends an
+IPN when a transaction's status *changes*, so a customer who abandons the
+payment page leaves a `PesapalPayment` stuck on `PENDING`. Trigger
+`POST /api/cron/pesapal-reconcile` every 15 minutes to re-check those against
+Pesapal and age out the dead ones:
+
+```bash
+*/15 * * * * /bin/bash /var/www/madar-crm/scripts/pesapal-reconcile-cron.sh >> /var/log/madar-crm-reconcile.log 2>&1
+```
+
+See [PESAPAL_GUIDE.md](PESAPAL_GUIDE.md) for the full payment setup.
 
 ## MVP behavior
 

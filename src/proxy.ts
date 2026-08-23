@@ -20,11 +20,11 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Protect everything except the login page, the cron notification routes
-  // (which have their own bearer-token auth), the public Pesapal
-  // checkout/callback/IPN routes (called by customers and by Pesapal itself,
-  // not logged-in staff), and framework/static assets.
+  // Protect everything except the login page, the cron routes (which have
+  // their own bearer-token auth), the public Pesapal checkout/callback/IPN
+  // routes (called by customers and by Pesapal itself, not logged-in staff),
+  // and framework/static assets.
   matcher: [
-    "/((?!login|api/notifications/daily-digest|api/notifications/payment-reminders|api/public/pesapal|_next/static|_next/image|favicon.ico).*)",
+    "/((?!login|api/notifications/daily-digest|api/notifications/payment-reminders|api/cron/pesapal-reconcile|api/public/pesapal|_next/static|_next/image|favicon.ico).*)",
   ],
 };
