@@ -32,6 +32,23 @@ const ALLOWED_ORIGINS = new Set([
 
 const VAT_MULTIPLIER_PERCENT = 118;
 
+/**
+ * Pesapal keeps 3% of every charge and a further 1% when settling the balance to
+ * the bank, so a customer billed the sticker price leaves Madar Hub ~4% short.
+ * Gross the charge up so the amount that actually lands in the account is the
+ * full VAT-inclusive price.
+ *
+ * Both fees are treated as percentages of the gross charge. That is the
+ * conservative reading: if Pesapal in fact takes its 1% from the post-3%
+ * balance, this settles a few francs *over* target rather than under.
+ */
+const PESAPAL_FEE_PERCENT = 4;
+
+/** Ceil rather than round — rounding down would settle short of the target. */
+function grossUpForPesapalFees(netAmount: number) {
+  return Math.ceil((netAmount * 100) / (100 - PESAPAL_FEE_PERCENT));
+}
+
 function corsHeaders(req: Request): Record<string, string> {
   const origin = req.headers.get("origin");
   if (!origin || !ALLOWED_ORIGINS.has(origin)) return {};
@@ -72,6 +89,7 @@ export async function POST(req: Request) {
 
     const merchantReference = `MH-${Date.now()}-${randomBytes(3).toString("hex")}`;
     const amountIncludingVat = Math.round((pkg.price * VAT_MULTIPLIER_PERCENT) / 100);
+    const chargedAmount = grossUpForPesapalFees(amountIncludingVat);
 
     await db.pesapalPayment.create({
       data: {
@@ -79,6 +97,7 @@ export async function POST(req: Request) {
         packageId: pkg.id,
         packageName: pkg.name,
         amount: amountIncludingVat,
+        chargedAmount,
         currency: "RWF",
         customerName,
         customerEmail,
@@ -92,7 +111,7 @@ export async function POST(req: Request) {
 
     const orderResult = await submitOrderRequest({
       merchantReference,
-      amount: amountIncludingVat,
+      amount: chargedAmount,
       currency: "RWF",
       description: safeDescription,
       callbackUrl: `${appUrl}/api/public/pesapal/callback`,

@@ -56,7 +56,37 @@ and `prisma/seed.ts`), not by name, so prices can be edited in the CRM without
 breaking the public buttons. Every package the pricing page can sell needs a
 `slug` set on its `Package` row.
 
-## 5. Reconcile abandoned payments (recurring)
+## 5. What the customer is charged
+
+A package's `price` in the CRM is the VAT-exclusive sticker price. The amount
+Pesapal bills is built from it in two steps, both in
+[the checkout route](src/app/api/public/pesapal/checkout/route.ts):
+
+1. **+18% VAT** — the actual sale price.
+2. **Grossed up for Pesapal's fees** — Pesapal keeps 3% of the charge and a
+   further 1% when settling to the bank. Charging the sale price directly would
+   land ~4% short, so the charge is `sale / 0.96`, rounded up.
+
+For a 100,000 RWF package: 118,000 sale price, **122,917 charged**, 118,000
+settled. Rounding is always up, so settlement never comes in under target.
+
+Two numbers are stored per payment, and they are not interchangeable:
+
+| Column | Meaning |
+| --- | --- |
+| `amount` | The VAT-inclusive sale price — what settles to the bank, and what the CRM books as revenue |
+| `chargedAmount` | What Pesapal actually billed the customer |
+
+The CRM records revenue at `amount`, so the 4% never inflates the books. The
+customer-facing result pages show `chargedAmount`, because that is what left
+their account.
+
+If Pesapal's fees change, edit `PESAPAL_FEE_PERCENT` — it is the single source
+of truth. Note the fee is disclosed to the customer in the checkout modal
+([assets/pesapal-checkout.js](../../assets/pesapal-checkout.js)); keep the two
+in step.
+
+## 6. Reconcile abandoned payments (recurring)
 
 Pesapal fires an IPN only when a transaction's status *changes*, and the
 browser callback only runs if the customer returns to the site. A customer who
@@ -85,7 +115,7 @@ PESAPAL_RECONCILE_MIN_AGE_MINUTES="15"   # settling window before polling a chec
 PESAPAL_ABANDON_AFTER_HOURS="24"         # give up and mark ABANDONED after this
 ```
 
-## 6. Troubleshooting
+## 7. Troubleshooting
 
 - **"Online payment is not configured yet"** — `MADAR_SITE_URL` or
   `NEXT_PUBLIC_APP_URL` is missing.
@@ -94,7 +124,7 @@ PESAPAL_ABANDON_AFTER_HOURS="24"         # give up and mark ABANDONED after this
 - **Payments stay "Pending" in the CRM** — the IPN likely couldn't reach the
   server (firewall / DNS), or `PESAPAL_IPN_ID` doesn't match what's
   registered. Re-run step 3. If the IPN is healthy, the customer probably
-  abandoned checkout; the step 5 sweep resolves those.
+  abandoned checkout; the step 6 sweep resolves those.
 - **Pesapal shows "Payment Processing" with a blank Payment Method** — no money
   moved. Pesapal only fills that field once a channel is chosen and a charge is
   attempted, so the customer never completed the payment leg (a Mobile Money
