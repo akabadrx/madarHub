@@ -33,20 +33,18 @@ const ALLOWED_ORIGINS = new Set([
 const VAT_MULTIPLIER_PERCENT = 118;
 
 /**
- * Pesapal keeps 3% of every charge and a further 1% when settling the balance to
- * the bank, so a customer billed the sticker price leaves Madar Hub ~4% short.
- * Gross the charge up so the amount that actually lands in the account is the
- * full VAT-inclusive price.
+ * Pesapal's 3% transaction charge, passed on to the customer rather than absorbed
+ * by Madar Hub. A 118,000 RWF sale is billed as 121,540.
  *
- * Both fees are treated as percentages of the gross charge. That is the
- * conservative reading: if Pesapal in fact takes its 1% from the post-3%
- * balance, this settles a few francs *over* target rather than under.
+ * This is a surcharge on the sale price, not a gross-up of it: Pesapal still
+ * takes its 3% of the larger figure, so settlement lands slightly under the sale
+ * price rather than exactly on it. Netting the full sale price would mean
+ * dividing by 0.97 instead of multiplying by 1.03.
  */
-const PESAPAL_FEE_PERCENT = 4;
+const PESAPAL_FEE_PERCENT = 3;
 
-/** Ceil rather than round — rounding down would settle short of the target. */
-function grossUpForPesapalFees(netAmount: number) {
-  return Math.ceil((netAmount * 100) / (100 - PESAPAL_FEE_PERCENT));
+function addPesapalFee(saleAmount: number) {
+  return Math.round((saleAmount * (100 + PESAPAL_FEE_PERCENT)) / 100);
 }
 
 function corsHeaders(req: Request): Record<string, string> {
@@ -89,7 +87,7 @@ export async function POST(req: Request) {
 
     const merchantReference = `MH-${Date.now()}-${randomBytes(3).toString("hex")}`;
     const amountIncludingVat = Math.round((pkg.price * VAT_MULTIPLIER_PERCENT) / 100);
-    const chargedAmount = grossUpForPesapalFees(amountIncludingVat);
+    const chargedAmount = addPesapalFee(amountIncludingVat);
 
     await db.pesapalPayment.create({
       data: {

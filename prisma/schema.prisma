@@ -131,7 +131,7 @@ model PesapalPayment {
   package           Package? @relation(fields: [packageId], references: [id])
   packageName       String
   amount            Int      // VAT-inclusive sale price: what settles to the bank and what the CRM books
-  chargedAmount     Int?     // what Pesapal billed: amount grossed up to absorb Pesapal fees
+  chargedAmount     Int?     // what Pesapal billed: amount plus Pesapal's 3% surcharge
   currency          String   @default("RWF")
   customerName      String
   customerEmail     String

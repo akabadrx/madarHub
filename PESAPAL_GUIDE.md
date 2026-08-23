@@ -63,12 +63,15 @@ Pesapal bills is built from it in two steps, both in
 [the checkout route](src/app/api/public/pesapal/checkout/route.ts):
 
 1. **+18% VAT** — the actual sale price.
-2. **Grossed up for Pesapal's fees** — Pesapal keeps 3% of the charge and a
-   further 1% when settling to the bank. Charging the sale price directly would
-   land ~4% short, so the charge is `sale / 0.96`, rounded up.
+2. **+3% Pesapal surcharge** — Pesapal's transaction charge, passed on to the
+   customer rather than absorbed. The charge is `sale * 1.03`.
 
-For a 100,000 RWF package: 118,000 sale price, **122,917 charged**, 118,000
-settled. Rounding is always up, so settlement never comes in under target.
+For a 100,000 RWF package: 118,000 sale price, **121,540 charged**.
+
+Note this is a surcharge on the sale price, not a gross-up of it: Pesapal takes
+its 3% of the *charged* figure, so 121,540 settles at about 117,894 — roughly
+0.1% under the sale price, plus whatever the bank settlement fee takes. Billing
+`sale / 0.97` (121,650) instead would net the sale price exactly.
 
 Two numbers are stored per payment, and they are not interchangeable:
 
