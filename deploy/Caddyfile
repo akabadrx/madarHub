@@ -1,59 +1,55 @@
-n8n.drbadr.cloud {
-    reverse_proxy n8n:5678
+{
+	servers {
+		trusted_proxies static 173.245.48.0/20 103.21.244.0/22 103.22.200.0/22 103.31.4.0/22 141.101.64.0/18 108.162.192.0/18 190.93.240.0/20 188.114.96.0/20 197.234.240.0/22 198.41.128.0/17 162.158.0.0/15 104.16.0.0/13 104.24.0.0/14 172.64.0.0/13 131.0.72.0/22 2400:cb00::/32 2606:4700::/32 2803:f800::/32 2405:b500::/32 2405:8100::/32 2a06:98c0::/29 2c0f:f248::/32
+		client_ip_headers Cf-Connecting-Ip X-Forwarded-For
+	}
 }
 
-badrmemory.com, www.badrmemory.com {
-    reverse_proxy 172.17.0.1:3000
+(logging) {
+	log {
+		output file /data/access.log {
+			roll_size 100MiB
+			roll_keep 20
+			roll_keep_for 2160h
+		}
+		format json
+	}
+}
+
+badrmemory.com, www.badrmemory.com, blog.badrmemory.com {
+	import logging
+	reverse_proxy 172.17.0.1:3000
 }
 
 http://72.62.132.37 {
-    reverse_proxy 172.17.0.1:8080
-}
-
-www.familycare-ae.com {
-    redir https://familycare-ae.com{uri} permanent
-}
-
-familycare-ae.com {
-    reverse_proxy 172.17.0.1:8080
+	import logging
+	reverse_proxy 172.17.0.1:8080
 }
 
 www.madarorbit.com {
-    # Redirecting the CRM API to the canonical host turns a checkout POST into a
-    # cross-origin redirect, which browsers abort with "Failed to fetch". Serve
-    # those routes on www instead and only redirect the marketing pages.
-    handle /crm/* {
-        reverse_proxy 172.17.0.1:3200
-    }
-    # Same reasoning for the membership portal: its server actions POST back to
-    # whichever host the page was served from, and a 301 to the canonical host
-    # would drop the request body.
-    handle /membership/* {
-        reverse_proxy 172.17.0.1:3201
-    }
-    handle {
-        redir https://madarorbit.com{uri} permanent
-    }
+	import logging
+	redir https://madarorbit.com{uri} permanent
 }
 
 madarorbit.com {
-    # Madar Hub CRM (also serves the public Pesapal checkout/callback/IPN
-    # routes under /crm/api/public/pesapal/*). `handle` keeps the /crm
-    # prefix intact, matching the CRM's Next.js basePath.
-    handle /crm {
-        reverse_proxy 172.17.0.1:3200
-    }
-    handle /crm/* {
-        reverse_proxy 172.17.0.1:3200
-    }
-    # Madar Hub membership portal (Next.js, basePath /membership).
-    handle /membership {
-        reverse_proxy 172.17.0.1:3201
-    }
-    handle /membership/* {
-        reverse_proxy 172.17.0.1:3201
-    }
-    handle {
-        reverse_proxy 172.17.0.1:8080
-    }
+	import logging
+	reverse_proxy 172.17.0.1:8080
+}
+
+adcrafter.drbadr.cloud {
+	import logging
+	reverse_proxy 172.17.0.1:3001
+	request_body {
+		max_size 50MB
+	}
+	encode gzip zstd
+}
+
+obsidianme.badrmemory.com {
+	import logging
+	reverse_proxy 172.17.0.1:5984
+	request_body {
+		max_size 200MB
+	}
+	encode gzip zstd
 }
