@@ -90,8 +90,15 @@ fi
 
 # A 200 alone does not prove the deploy is good; the CSS chunk is the part that
 # silently breaks, so verify it directly.
-CSS_PATH=$(grep -o '/membership/_next/static/chunks/[^"]*\.css' -m1 <(curl -s http://127.0.0.1:3201/membership/login) || true)
+CSS_PATH=$(curl -s http://127.0.0.1:3201/membership/login     | grep -o '/membership/_next/static/chunks/[^"]*\.css' | head -1)
 if [ -n "$CSS_PATH" ]; then
-    CSS_STATUS=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:3201${CSS_PATH#/membership}" || echo "000")
-    [ "$CSS_STATUS" = "200" ] && log "Stylesheet chunk OK." || warn "Stylesheet chunk returned $CSS_STATUS — static assets may not have copied."
+    # The path already carries the /membership basePath, so use it as-is.
+    CSS_STATUS=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:3201${CSS_PATH}" || echo "000")
+    if [ "$CSS_STATUS" = "200" ]; then
+        log "Stylesheet chunk OK."
+    else
+        warn "Stylesheet chunk returned $CSS_STATUS — static assets may not have copied."
+    fi
+else
+    warn "Could not find a stylesheet link in the login page to verify."
 fi
