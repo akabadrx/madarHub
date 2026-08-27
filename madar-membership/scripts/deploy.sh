@@ -68,6 +68,20 @@ if [ -d "public" ]; then
     cp -r public .next/standalone/public
 fi
 
+# Next does not trace the Prisma query engine into the standalone bundle either.
+# It happens to resolve via the project-root node_modules while PM2's cwd points
+# there, but that is luck, not design: without this the app throws
+# PrismaClientInitializationError ("could not locate the Query Engine") on the
+# first database call, which means every login and signup 500s.
+if [ -d "node_modules/.prisma/client" ]; then
+    log "Copying Prisma query engine into the standalone output..."
+    mkdir -p .next/standalone/node_modules/.prisma
+    rm -rf .next/standalone/node_modules/.prisma/client
+    cp -r node_modules/.prisma/client .next/standalone/node_modules/.prisma/client
+else
+    warn "node_modules/.prisma/client not found — did prisma generate run?"
+fi
+
 # The standalone server loads its own .env from next to server.js, not the
 # project root's — copy it every deploy or env var changes go unnoticed.
 cp .env .next/standalone/.env
