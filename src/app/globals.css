@@ -1,0 +1,353 @@
+/*
+ * Membership portal styles.
+ *
+ * The marketing site's stylesheet (assets/styles.css) is linked first and owns
+ * the identity: brand tokens, .site-header, .site-nav, .button, .field, .footer.
+ * Everything here is additive — new layout for screens the static site does not
+ * have. Do not redefine anything the site stylesheet already sets, or the two
+ * will drift apart and the portal will stop looking like the same website.
+ */
+
+/* ---------------------------------------------------------------- shell -- */
+
+.mp-shell {
+  min-height: calc(100vh - 76px);
+  display: grid;
+  place-items: center;
+  padding: 56px 24px 80px;
+  background:
+    radial-gradient(1200px 600px at 50% -10%, rgba(214, 168, 79, 0.16), transparent 60%),
+    var(--navy);
+}
+
+.mp-shell-inner {
+  width: min(460px, 100%);
+}
+
+.mp-card {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: 40px;
+}
+
+@media (max-width: 520px) {
+  .mp-card { padding: 28px 22px; }
+  .mp-shell { padding: 32px 16px 56px; }
+}
+
+.mp-card-head {
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.mp-card-head h1 {
+  font-family: 'Montserrat', system-ui, sans-serif;
+  font-size: 1.7rem;
+  font-weight: 800;
+  color: var(--navy);
+  line-height: 1.15;
+  margin-bottom: 8px;
+}
+
+.mp-card-head p {
+  color: var(--muted);
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+/* ---------------------------------------------------------------- form --- */
+
+.mp-form {
+  display: grid;
+  gap: 18px;
+}
+
+.mp-label-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mp-label-row a {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--gold-dark);
+}
+
+.mp-label-row a:hover,
+.mp-label-row a:focus-visible {
+  color: var(--navy);
+  text-decoration: underline;
+}
+
+.mp-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 0.92rem;
+  color: var(--navy-secondary);
+  font-weight: 500;
+  user-select: none;
+}
+
+.mp-check input {
+  width: 18px;
+  height: 18px;
+  min-height: 0;
+  flex-shrink: 0;
+  accent-color: var(--gold-dark);
+  cursor: pointer;
+  margin: 0;
+}
+
+.mp-form .button {
+  width: 100%;
+}
+
+.mp-hint {
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin: -8px 0 0;
+}
+
+/* -------------------------------------------------------------- google --- */
+
+.mp-divider {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 24px 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.mp-divider::before,
+.mp-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.button.google {
+  width: 100%;
+  background: var(--white);
+  border-color: var(--border);
+  color: var(--dark-text);
+  font-weight: 600;
+}
+
+.button.google:hover,
+.button.google:focus-visible {
+  border-color: var(--gold);
+  background: rgba(214, 168, 79, 0.06);
+  box-shadow: 0 8px 24px rgba(7, 26, 45, 0.08);
+}
+
+.button.google svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+/* ------------------------------------------------------------ messages --- */
+
+.mp-alert {
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  border: 1px solid transparent;
+}
+
+.mp-alert.error {
+  background: rgba(179, 38, 30, 0.07);
+  border-color: rgba(179, 38, 30, 0.25);
+  color: #8C1D18;
+}
+
+.mp-alert.success {
+  background: rgba(21, 128, 61, 0.08);
+  border-color: rgba(21, 128, 61, 0.25);
+  color: #14532D;
+}
+
+.mp-alert.info {
+  background: var(--soft-gold-bg);
+  border-color: rgba(214, 168, 79, 0.4);
+  color: #6B4E12;
+}
+
+/* ---------------------------------------------------------------- foot --- */
+
+.mp-card-foot {
+  margin-top: 26px;
+  padding-top: 22px;
+  border-top: 1px solid var(--border);
+  text-align: center;
+  font-size: 0.92rem;
+  color: var(--muted);
+}
+
+.mp-card-foot .button {
+  margin-top: 12px;
+  width: 100%;
+}
+
+.mp-back {
+  display: block;
+  text-align: center;
+  margin-top: 20px;
+  font-size: 0.88rem;
+  color: rgba(255, 255, 255, 0.72);
+  font-weight: 500;
+}
+
+.mp-back:hover,
+.mp-back:focus-visible {
+  color: var(--gold-light);
+  text-decoration: underline;
+}
+
+/* ----------------------------------------------------------- dashboard --- */
+
+.mp-dash {
+  width: min(var(--container), calc(100% - 48px));
+  margin-inline: auto;
+  padding: 48px 0 80px;
+}
+
+.mp-dash-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 32px;
+}
+
+.mp-dash-head h1 {
+  font-family: 'Montserrat', system-ui, sans-serif;
+  font-size: clamp(1.6rem, 3.4vw, 2.1rem);
+  font-weight: 800;
+  color: var(--navy);
+  margin: 0 0 4px;
+}
+
+.mp-dash-head p {
+  color: var(--muted);
+  margin: 0;
+}
+
+.mp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.mp-panel {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 26px;
+  box-shadow: var(--shadow-sm);
+}
+
+.mp-panel h2 {
+  font-family: 'Montserrat', system-ui, sans-serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0 0 14px;
+}
+
+.mp-stat {
+  font-family: 'Montserrat', system-ui, sans-serif;
+  font-size: 1.55rem;
+  font-weight: 800;
+  color: var(--navy);
+  line-height: 1.2;
+}
+
+.mp-stat-sub {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin-top: 6px;
+}
+
+.mp-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.mp-badge::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.mp-badge.active { background: rgba(21, 128, 61, 0.1); color: #15803D; }
+.mp-badge.delayed { background: rgba(180, 83, 9, 0.12); color: #B45309; }
+.mp-badge.suspended { background: rgba(179, 38, 30, 0.1); color: #B3261E; }
+.mp-badge.none { background: rgba(102, 112, 128, 0.12); color: var(--muted); }
+
+.mp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+
+.mp-table th {
+  text-align: left;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 0 0 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.mp-table td {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+  color: var(--dark-text);
+}
+
+.mp-table tr:last-child td { border-bottom: none; }
+.mp-table .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.mp-empty {
+  color: var(--muted);
+  font-size: 0.93rem;
+  margin: 0;
+}
+
+.mp-logout {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 600;
+  color: var(--navy-secondary);
+  cursor: pointer;
+  min-height: 0;
+}
+
+.mp-logout:hover { color: var(--gold-dark); text-decoration: underline; }
