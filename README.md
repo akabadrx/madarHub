@@ -6,8 +6,10 @@ their payment history.
 
 ## How it fits with the rest of the site
 
-Three separate things share the `madarorbit.com` domain, split by path in
-`deploy/Caddyfile`:
+Three separate things share the `madarorbit.com` domain. Cloudflare fronts
+Caddy, Caddy terminates TLS and hands everything for this domain to nginx on
+`172.17.0.1:8080`, and **nginx does the path routing** in
+`/etc/nginx/sites-enabled/madarorbit` (mirrored at `deploy/nginx-madarorbit.conf`):
 
 | Path | App | Port |
 | --- | --- | --- |
@@ -15,9 +17,12 @@ Three separate things share the `madarorbit.com` domain, split by path in
 | `/crm/*` | Staff CRM (Next.js) | 3200 |
 | `/membership/*` | This app (Next.js) | 3201 |
 
-`/membership/*` is also served on `www.madarorbit.com` rather than redirected.
-Redirecting it would turn a form submission into a cross-origin redirect and
-drop the request body — the same failure the Pesapal checkout hit previously.
+Caddy redirects all of `www.madarorbit.com` to the canonical host, so anyone
+reaching `www.madarorbit.com/membership/login` is bounced before nginx sees it.
+That is harmless for the portal, whose forms are same-origin, but it means a
+cross-host POST would lose its body — the failure the Pesapal checkout hit,
+which [pesapal-checkout.js](../assets/pesapal-checkout.js) works around by
+hardcoding the canonical origin. Keep portal forms same-origin.
 
 ## Looking like the same website
 
@@ -135,28 +140,32 @@ git subtree push --prefix=madar-membership origin membership-deploy
 ### First time, on the VPS
 
 ```bash
-psql "$DATABASE_URL" -c 'CREATE SCHEMA IF NOT EXISTS membership;'
 git clone -b membership-deploy <repo-url> /var/www/madar-membership
 cd /var/www/madar-membership
 cp .env.example .env   # then fill it in — see the notes inside
-npm ci
-npx prisma generate
-npx prisma migrate deploy
-npm run build
-cp .env .next/standalone/.env        # standalone reads its own .env
-pm2 start ecosystem.config.js && pm2 save
+bash scripts/deploy.sh
 ```
 
-Then reload Caddy so `/membership` routes to port 3201.
+Then add the `location ^~ /membership` block to
+`/etc/nginx/sites-enabled/madarorbit` (copy it from
+`deploy/nginx-madarorbit.conf`), run `nginx -t`, and `systemctl reload nginx`.
+Caddy needs no changes.
 
 ### Later deploys
 
 ```bash
-cd /var/www/madar-membership && git pull --ff-only origin membership-deploy
-npm ci && npx prisma generate && npx prisma migrate deploy && npm run build
-cp .env .next/standalone/.env
-pm2 restart madar-membership
+cd /var/www/madar-membership && bash scripts/deploy.sh
 ```
+
+`scripts/deploy.sh` handles the whole sequence — pull, install, migrate, build,
+copy assets, restart — and verifies the result.
+
+**Do not hand-roll these steps.** `next build` with `output: "standalone"` does
+not copy `.next/static` into the standalone folder. Skip that and the server
+still returns HTTP 200 with correct HTML, but every CSS and JS chunk 404s and
+the page renders unstyled. A `curl` health check passes while the site is
+visibly broken, which is exactly how it slipped through the first deploy. The
+script copies the assets and then checks the stylesheet chunk specifically.
 
 `.env` is gitignored and is maintained by hand on the VPS, the same way the
 CRM's is — `git pull` never overwrites it.
