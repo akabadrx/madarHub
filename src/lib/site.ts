@@ -6,6 +6,13 @@
 
 export const SITE_ORIGIN = process.env.NEXT_PUBLIC_SITE_ORIGIN ?? "";
 
+/**
+ * Cache-busting version on the marketing site's stylesheet. It must match the
+ * `?v=` the static pages use, or the portal and the rest of the site can end up
+ * on two different versions of the same CSS. Bump both together.
+ */
+export const SITE_STYLES_VERSION = "20260828";
+
 /** A URL on the marketing site, e.g. siteUrl("pricing.html"). */
 export function siteUrl(path: string): string {
   return `${SITE_ORIGIN}/${path.replace(/^\//, "")}`;
