@@ -3,6 +3,8 @@
 /out/
 /build
 .env*
+# but the template carries no secrets and the deploy needs it
+!.env.example
 *.tsbuildinfo
 next-env.d.ts
 /src/generated/prisma
