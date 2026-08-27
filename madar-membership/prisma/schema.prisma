@@ -1,0 +1,78 @@
+// Membership portal schema.
+//
+// This app shares the CRM's Postgres database but owns ONLY the tables below.
+// The CRM's tables (Lead, Payment, Package, ...) are read through raw queries in
+// src/lib/crm.ts and are deliberately NOT modelled here, so that `prisma migrate`
+// run from this project can never alter or drop anything the CRM owns.
+//
+// Rule: migrations for CRM tables are created in "MADAR HUB CRM/madar-crm" only.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model MembershipUser {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  // Null for Google-only accounts, which have no password to verify.
+  passwordHash  String?
+  fullName      String
+  phone         String?   @unique
+  // Set once the account is matched to a CRM Lead, which is what gives the
+  // member a real membership status and payment history. Null means the person
+  // signed up but has not been recognised as an existing member yet.
+  leadId        String?   @unique
+  emailVerified DateTime?
+  lastLoginAt   DateTime?
+  disabledAt    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  oauthAccounts OAuthAccount[]
+  resetTokens   PasswordResetToken[]
+
+  @@index([leadId])
+}
+
+model OAuthAccount {
+  id             String         @id @default(cuid())
+  userId         String
+  user           MembershipUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider       String // "google"
+  providerUserId String
+  createdAt      DateTime       @default(now())
+
+  @@unique([provider, providerUserId])
+  @@index([userId])
+}
+
+model PasswordResetToken {
+  id         String         @id @default(cuid())
+  userId     String
+  user       MembershipUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // sha256 of the emailed token; the raw value is never stored.
+  tokenHash  String         @unique
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime       @default(now())
+
+  @@index([userId, createdAt])
+}
+
+// Short-lived state for the Google OAuth round trip (state + PKCE verifier).
+// Rows are consumed on callback and swept after they expire.
+model OAuthState {
+  id           String   @id @default(cuid())
+  state        String   @unique
+  codeVerifier String
+  redirectTo   String?
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+
+  @@index([expiresAt])
+}

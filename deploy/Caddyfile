@@ -25,6 +25,12 @@ www.madarorbit.com {
     handle /crm/* {
         reverse_proxy 172.17.0.1:3200
     }
+    # Same reasoning for the membership portal: its server actions POST back to
+    # whichever host the page was served from, and a 301 to the canonical host
+    # would drop the request body.
+    handle /membership/* {
+        reverse_proxy 172.17.0.1:3201
+    }
     handle {
         redir https://madarorbit.com{uri} permanent
     }
@@ -39,6 +45,13 @@ madarorbit.com {
     }
     handle /crm/* {
         reverse_proxy 172.17.0.1:3200
+    }
+    # Madar Hub membership portal (Next.js, basePath /membership).
+    handle /membership {
+        reverse_proxy 172.17.0.1:3201
+    }
+    handle /membership/* {
+        reverse_proxy 172.17.0.1:3201
     }
     handle {
         reverse_proxy 172.17.0.1:8080

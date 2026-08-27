@@ -3294,3 +3294,29 @@ body.pesapal-modal-open {
     margin-bottom: 0;
   }
 }
+
+/* ---------------------------------------------------------- membership -- */
+/* Entry point to the member portal at /membership. The label collapses to
+   "Login" on phones, where it is the only header button left standing. */
+
+.membership-link-short {
+  display: none;
+}
+
+@media (max-width: 520px) {
+  /* .header-actions .button is hidden at this width; the membership link is
+     the only way into the account area on a phone, so it stays. */
+  .header-actions .button.membership-link {
+    display: inline-flex;
+    padding: 8px 14px;
+    font-size: 0.82rem;
+  }
+
+  .membership-link-long {
+    display: none;
+  }
+
+  .membership-link-short {
+    display: inline;
+  }
+}

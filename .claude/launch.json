@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "membership",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "madar-membership", "run", "dev"],
+      "port": 3201
+    }
+  ]
+}
