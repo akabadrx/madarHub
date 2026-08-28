@@ -31,13 +31,13 @@ export default async function ProfilePage() {
           </div>
 
           <div className="mp-profile">
-            <section className="mp-panel">
-              <h2>Account</h2>
+            <section className="mp-section">
+              <div className="mp-section-head"><h2>Account</h2></div>
               <ProfileForm fullName={user.fullName} phone={user.phone} email={user.email} />
             </section>
 
-            <section className="mp-panel">
-              <h2>Membership link</h2>
+            <section className="mp-section">
+              <div className="mp-section-head"><h2>Membership link</h2></div>
               {lead ? (
                 <>
                   <span className="mp-badge active">Connected</span>

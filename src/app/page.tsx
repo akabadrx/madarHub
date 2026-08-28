@@ -14,7 +14,7 @@ export const metadata: Metadata = { title: "My membership" };
 
 export const dynamic = "force-dynamic";
 
-const BADGE_CLASS: Record<string, string> = {
+const CHIP_CLASS: Record<string, string> = {
   Active: "active",
   "Delayed Payment": "delayed",
   Suspended: "suspended",
@@ -32,10 +32,14 @@ const PAYMENT_NOTICE: Record<string, { tone: string; text: string }> = {
   },
 };
 
+function plural(n: number, word: string) {
+  return `${n} ${word}${n === 1 ? "" : "s"}`;
+}
+
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ payment?: string; package?: string }>;
+  searchParams: Promise<{ payment?: string }>;
 }) {
   const user = await getSessionUser();
   if (!user) redirect("/login");
@@ -64,6 +68,9 @@ export default async function DashboardPage({
   const currentSlug = packages.find((p) => p.name === currentPackage?.name)?.slug ?? null;
   const paymentDue = membership?.status === "Delayed Payment" || membership?.status === "Suspended";
   const firstName = user.fullName.split(" ")[0] || "there";
+  const status = membership?.status ?? "No active plan";
+  const monthlyAmount = currentPackage?.price ?? lastPayment?.amount ?? 0;
+  const oldestPayment = payments.length > 0 ? payments[payments.length - 1] : null;
 
   return (
     <>
@@ -86,82 +93,80 @@ export default async function DashboardPage({
           </div>
 
           {notice ? (
-            <p className={`mp-alert ${notice.tone}`} role="status" style={{ marginBottom: 24 }}>
+            <p className={`mp-alert ${notice.tone}`} role="status" style={{ marginBottom: 20 }}>
               {notice.text}
             </p>
           ) : null}
 
-          <div className="mp-grid">
-            <section className="mp-panel">
-              <h2>Membership status</h2>
-              {membership ? (
-                <>
-                  <span className={`mp-badge ${BADGE_CLASS[membership.status] ?? "none"}`}>
-                    {membership.status}
-                  </span>
-                  <p className="mp-stat-sub">
-                    {membership.status === "Active"
+          {/* The membership itself, presented as an object rather than a row of
+              equally weighted stat panels. */}
+          <section className="mp-hero" aria-label="Your membership">
+            <div className="mp-hero-top">
+              <div>
+                <p className="mp-hero-eyebrow">Madar Hub Membership</p>
+                <h2 className="mp-hero-name">{lead?.name || user.fullName}</h2>
+                <p className="mp-hero-meta">
+                  {membership
+                    ? membership.status === "Active"
                       ? "Your membership is up to date."
                       : membership.status === "Delayed Payment"
-                        ? `Payment is overdue. ${membership.daysUntilSuspension} day${
-                            membership.daysUntilSuspension === 1 ? "" : "s"
-                          } left before your desk is suspended.`
-                        : "Your membership is suspended. Pay below to reactivate it."}
-                  </p>
-                </>
-              ) : (
-                <>
-                  <span className="mp-badge none">No active plan</span>
-                  <p className="mp-stat-sub">
-                    {lead
-                      ? "You have no monthly subscription running right now."
-                      : "We have not matched this account to a membership yet. Pick a package below to get started."}
-                  </p>
-                </>
-              )}
-            </section>
+                        ? `Payment overdue — ${plural(membership.daysUntilSuspension, "day")} before suspension.`
+                        : "Suspended. Renew below to reactivate."
+                    : lead
+                      ? "No monthly subscription running right now."
+                      : "Not connected to a membership yet."}
+                </p>
+              </div>
+              <span className={`mp-chip ${CHIP_CLASS[status] ?? "none"}`}>{status}</span>
+            </div>
 
-            <section className="mp-panel">
-              <h2>Next payment</h2>
-              {membership ? (
-                <>
-                  <p className="mp-stat">{formatDate(membership.nextPaymentDate)}</p>
-                  <p className="mp-stat-sub">
-                    {membership.dueAmount > 0
-                      ? `${formatRwf(membership.dueAmount)} due now`
-                      : `${formatRwf(currentPackage?.price ?? lastPayment?.amount ?? 0)} per month`}
-                  </p>
-                </>
-              ) : (
-                <>
-                  <p className="mp-stat">&mdash;</p>
-                  <p className="mp-stat-sub">Nothing scheduled.</p>
-                </>
-              )}
-            </section>
+            <dl className="mp-figures">
+              <div className="mp-figure">
+                <dt>Plan</dt>
+                <dd>
+                  {currentPackage?.name ?? lead?.interest ?? "Not set"}
+                  {monthlyAmount > 0 ? <small>{formatRwf(monthlyAmount)} per month</small> : null}
+                </dd>
+              </div>
+              <div className="mp-figure">
+                <dt>Next payment</dt>
+                <dd className={paymentDue ? "is-due" : undefined}>
+                  {membership ? formatDate(membership.nextPaymentDate) : "—"}
+                  <small>
+                    {membership
+                      ? membership.dueAmount > 0
+                        ? `${formatRwf(membership.dueAmount)} due now`
+                        : "Nothing due yet"
+                      : "Nothing scheduled"}
+                  </small>
+                </dd>
+              </div>
+              <div className="mp-figure">
+                <dt>Member since</dt>
+                <dd>
+                  {oldestPayment ? formatDate(oldestPayment.paymentDate) : "—"}
+                  <small>
+                    {payments.length > 0
+                      ? `${plural(payments.length, "payment")} on record`
+                      : "No payments yet"}
+                  </small>
+                </dd>
+              </div>
+            </dl>
+          </section>
 
-            <section className="mp-panel">
-              <h2>Your package</h2>
-              <p className="mp-stat">{currentPackage?.name ?? lead?.interest ?? "Not set"}</p>
-              <p className="mp-stat-sub">
-                {currentPackage
-                  ? `${formatRwf(currentPackage.price)} ${currentPackage.billingType}`
-                  : "Choose one below to get started."}
-              </p>
-            </section>
-          </div>
-
-          <section className="mp-panel" style={{ marginTop: 20 }}>
-            <h2>{paymentDue ? "Renew your membership" : "Pay for a package"}</h2>
+          <section className="mp-section">
+            <div className="mp-section-head">
+              <h2>{paymentDue ? "Renew your membership" : "Pay for a package"}</h2>
+              <p className="mp-section-note">Secure payment through Pesapal</p>
+            </div>
 
             {paymentDue && membership ? (
               <div className="mp-due">
-                <p style={{ margin: 0 }}>
+                <p>
                   <strong>{formatRwf(membership.dueAmount)}</strong> is due
                   {membership.status === "Delayed Payment"
-                    ? ` — ${membership.daysUntilSuspension} day${
-                        membership.daysUntilSuspension === 1 ? "" : "s"
-                      } left before suspension.`
+                    ? ` — ${plural(membership.daysUntilSuspension, "day")} left before suspension.`
                     : " to reactivate your membership."}{" "}
                   Your details are already on file, so this takes one tap.
                 </p>
@@ -176,7 +181,7 @@ export default async function DashboardPage({
               />
             ) : (
               <div className="mp-due">
-                <p style={{ margin: "0 0 14px" }}>
+                <p>
                   Add your phone number before paying online — Pesapal uses it to reach your mobile
                   money account.
                 </p>
@@ -187,29 +192,36 @@ export default async function DashboardPage({
             )}
           </section>
 
-          <section className="mp-panel" style={{ marginTop: 20 }}>
-            <h2>Payment history</h2>
+          <section className="mp-section">
+            <div className="mp-section-head">
+              <h2>Payment history</h2>
+              {payments.length > 0 ? <p className="mp-section-note">Most recent first</p> : null}
+            </div>
             {payments.length > 0 ? (
-              <table className="mp-table">
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Package</th>
-                    <th>Method</th>
-                    <th className="num">Amount</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {payments.map((payment) => (
-                    <tr key={payment.id}>
-                      <td>{formatDate(payment.paymentDate)}</td>
-                      <td>{payment.packageName ?? "—"}</td>
-                      <td>{payment.paymentMethod}</td>
-                      <td className="num">{formatRwf(payment.amount)}</td>
+              <div className="mp-table-scroll">
+                <table className="mp-table">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Package</th>
+                      <th>Method</th>
+                      <th className="num">Amount</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {payments.map((payment) => (
+                      <tr key={payment.id}>
+                        <td className="mp-date">{formatDate(payment.paymentDate)}</td>
+                        <td>{payment.packageName ?? "—"}</td>
+                        <td>
+                          <span className="mp-method">{payment.paymentMethod}</span>
+                        </td>
+                        <td className="num">{formatRwf(payment.amount)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             ) : (
               <p className="mp-empty">
                 No payments recorded yet. Payments made at the front desk or online will appear here.
