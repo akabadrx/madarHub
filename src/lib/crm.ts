@@ -35,6 +35,14 @@ export type CrmPackage = {
   name: string;
 };
 
+export type CrmCatalogPackage = {
+  slug: string;
+  name: string;
+  price: number;
+  billingType: string;
+  description: string | null;
+};
+
 /**
  * Finds the CRM Lead for a normalised phone number, so a member who signs up is
  * connected to the record staff already keep for them. Returns null for someone
@@ -100,4 +108,26 @@ export async function getCurrentPackage(leadId: string): Promise<CrmPackage | nu
     LIMIT 1
   `;
   return suggested[0] ?? null;
+}
+
+/** Active packages a member can buy, cheapest first. Slug-less rows cannot be
+ * checked out (the checkout is addressed by slug), so they are excluded. */
+export async function getActivePackages(): Promise<CrmCatalogPackage[]> {
+  return getDb().$queryRaw<CrmCatalogPackage[]>`
+    SELECT slug, name, price, "billingType", description
+    FROM public."Package"
+    WHERE active = true AND slug IS NOT NULL
+    ORDER BY price ASC
+  `;
+}
+
+/** One active package by slug, used to validate a checkout request. */
+export async function getPackageBySlug(slug: string): Promise<CrmCatalogPackage | null> {
+  const rows = await getDb().$queryRaw<CrmCatalogPackage[]>`
+    SELECT slug, name, price, "billingType", description
+    FROM public."Package"
+    WHERE slug = ${slug} AND active = true
+    LIMIT 1
+  `;
+  return rows[0] ?? null;
 }

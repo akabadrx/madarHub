@@ -2,12 +2,13 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { PackagePicker } from "@/components/package-picker";
 import { logout } from "@/app/auth-actions";
+import { linkAccountToLeadIfPossible } from "@/app/checkout-actions";
 import { getSessionUser } from "@/lib/session";
-import { getCurrentPackage, getLead, getPayments } from "@/lib/crm";
+import { getActivePackages, getCurrentPackage, getLead, getPayments } from "@/lib/crm";
 import { getMembershipPaymentStatus } from "@/lib/membership";
 import { formatDate, formatRwf } from "@/lib/utils";
-import { siteUrl } from "@/lib/site";
 
 export const metadata: Metadata = { title: "My membership" };
 
@@ -19,26 +20,50 @@ const BADGE_CLASS: Record<string, string> = {
   Suspended: "suspended",
 };
 
-export default async function DashboardPage() {
+const PAYMENT_NOTICE: Record<string, { tone: string; text: string }> = {
+  success: { tone: "success", text: "Payment received. Thank you — your membership is up to date." },
+  pending: {
+    tone: "info",
+    text: "Your payment is still being confirmed. This page will update once it clears, usually within a few minutes.",
+  },
+  failed: {
+    tone: "error",
+    text: "That payment did not go through. Nothing has been charged — you can try again below.",
+  },
+};
+
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ payment?: string; package?: string }>;
+}) {
   const user = await getSessionUser();
   if (!user) redirect("/login");
 
-  // An account with no linked CRM record belongs to someone who signed up
-  // before they became a member. They get the portal, just nothing to show yet.
-  const lead = user.leadId ? await getLead(user.leadId) : null;
-  const [payments, currentPackage] = lead
-    ? await Promise.all([getPayments(lead.id), getCurrentPackage(lead.id)])
-    : [[], null];
+  // An account can be created before the member exists in the CRM, and a Google
+  // sign-up carries no phone at all. Retry the match on each visit so a member
+  // is connected as soon as their record or number appears.
+  const leadId =
+    user.leadId ?? (user.phone ? await linkAccountToLeadIfPossible(user.id, user.phone) : null);
+
+  const params = await searchParams;
+  const notice = params.payment ? PAYMENT_NOTICE[params.payment] : undefined;
+
+  const lead = leadId ? await getLead(leadId) : null;
+
+  const [payments, currentPackage, packages] = await Promise.all([
+    lead ? getPayments(lead.id) : Promise.resolve([]),
+    lead ? getCurrentPackage(lead.id) : Promise.resolve(null),
+    getActivePackages(),
+  ]);
 
   const lastPayment = payments[0] ?? null;
   const membership = lead
-    ? getMembershipPaymentStatus(
-        currentPackage,
-        lastPayment?.paymentDate ?? null,
-        lastPayment?.amount ?? 0,
-      )
+    ? getMembershipPaymentStatus(currentPackage, lastPayment?.paymentDate ?? null, lastPayment?.amount ?? 0)
     : null;
 
+  const currentSlug = packages.find((p) => p.name === currentPackage?.name)?.slug ?? null;
+  const paymentDue = membership?.status === "Delayed Payment" || membership?.status === "Suspended";
   const firstName = user.fullName.split(" ")[0] || "there";
 
   return (
@@ -58,6 +83,12 @@ export default async function DashboardPage() {
             </form>
           </div>
 
+          {notice ? (
+            <p className={`mp-alert ${notice.tone}`} role="status" style={{ marginBottom: 24 }}>
+              {notice.text}
+            </p>
+          ) : null}
+
           <div className="mp-grid">
             <section className="mp-panel">
               <h2>Membership status</h2>
@@ -73,7 +104,7 @@ export default async function DashboardPage() {
                         ? `Payment is overdue. ${membership.daysUntilSuspension} day${
                             membership.daysUntilSuspension === 1 ? "" : "s"
                           } left before your desk is suspended.`
-                        : "Your membership is suspended. Make a payment to reactivate it."}
+                        : "Your membership is suspended. Pay below to reactivate it."}
                   </p>
                 </>
               ) : (
@@ -82,7 +113,7 @@ export default async function DashboardPage() {
                   <p className="mp-stat-sub">
                     {lead
                       ? "You have no monthly subscription running right now."
-                      : "We have not matched this account to a membership yet. If you already use Madar Hub, message us on WhatsApp and we will connect it."}
+                      : "We have not matched this account to a membership yet. Pick a package below to get started."}
                   </p>
                 </>
               )}
@@ -111,10 +142,36 @@ export default async function DashboardPage() {
               <h2>Your package</h2>
               <p className="mp-stat">{currentPackage?.name ?? lead?.interest ?? "Not set"}</p>
               <p className="mp-stat-sub">
-                <a href={siteUrl("pricing.html")}>View all packages and pricing &rarr;</a>
+                {currentPackage
+                  ? `${formatRwf(currentPackage.price)} ${currentPackage.billingType}`
+                  : "Choose one below to get started."}
               </p>
             </section>
           </div>
+
+          <section className="mp-panel" style={{ marginTop: 20 }}>
+            <h2>{paymentDue ? "Renew your membership" : "Pay for a package"}</h2>
+
+            {paymentDue && membership ? (
+              <div className="mp-due">
+                <p style={{ margin: 0 }}>
+                  <strong>{formatRwf(membership.dueAmount)}</strong> is due
+                  {membership.status === "Delayed Payment"
+                    ? ` — ${membership.daysUntilSuspension} day${
+                        membership.daysUntilSuspension === 1 ? "" : "s"
+                      } left before suspension.`
+                    : " to reactivate your membership."}{" "}
+                  Your details are already on file, so this takes one tap.
+                </p>
+              </div>
+            ) : null}
+
+            <PackagePicker
+              packages={packages}
+              currentSlug={currentSlug}
+              renewLabel={paymentDue ? "Renew now" : currentSlug ? "Pay now" : "Continue to payment"}
+            />
+          </section>
 
           <section className="mp-panel" style={{ marginTop: 20 }}>
             <h2>Payment history</h2>
@@ -141,8 +198,7 @@ export default async function DashboardPage() {
               </table>
             ) : (
               <p className="mp-empty">
-                No payments recorded yet. Payments made at the front desk or through Pesapal will
-                appear here.
+                No payments recorded yet. Payments made at the front desk or online will appear here.
               </p>
             )}
           </section>
