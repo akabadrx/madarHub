@@ -104,7 +104,7 @@ export default async function DashboardPage({
             <div className="mp-hero-top">
               <div>
                 <p className="mp-hero-eyebrow">Madar Hub Membership</p>
-                <h2 className="mp-hero-name">{lead?.name || user.fullName}</h2>
+                <h2 className="mp-hero-name">{user.fullName || lead?.name}</h2>
                 <p className="mp-hero-meta">
                   {membership
                     ? membership.status === "Active"
