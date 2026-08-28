@@ -26,6 +26,6 @@ export const config = {
   // the internal server-to-server routes (guarded by INTERNAL_API_SECRET),
   // and framework/static assets.
   matcher: [
-    "/((?!login|api/notifications/daily-digest|api/notifications/payment-reminders|api/cron/pesapal-reconcile|api/public/pesapal|api/internal/|_next/static|_next/image|favicon.ico).*)",
+    "/((?!login|api/notifications/daily-digest|api/notifications/payment-reminders|api/notifications/member-reminders|api/cron/pesapal-reconcile|api/public/pesapal|api/internal/|_next/static|_next/image|favicon.ico).*)",
   ],
 };
