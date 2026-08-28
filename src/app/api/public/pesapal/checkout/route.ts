@@ -3,6 +3,7 @@ import { randomBytes } from "crypto";
 import { z } from "zod";
 import { getDb } from "@/lib/db";
 import { submitOrderRequest } from "@/lib/pesapal";
+import { checkoutAmounts } from "@/lib/pricing";
 
 /**
  * POST /crm/api/public/pesapal/checkout
@@ -29,23 +30,6 @@ const ALLOWED_ORIGINS = new Set([
   "https://madarorbit.com",
   "https://www.madarorbit.com",
 ]);
-
-const VAT_MULTIPLIER_PERCENT = 118;
-
-/**
- * Pesapal's 3% transaction charge, passed on to the customer rather than absorbed
- * by Madar Hub. A 118,000 RWF sale is billed as 121,540.
- *
- * This is a surcharge on the sale price, not a gross-up of it: Pesapal still
- * takes its 3% of the larger figure, so settlement lands slightly under the sale
- * price rather than exactly on it. Netting the full sale price would mean
- * dividing by 0.97 instead of multiplying by 1.03.
- */
-const PESAPAL_FEE_PERCENT = 3;
-
-function addPesapalFee(saleAmount: number) {
-  return Math.round((saleAmount * (100 + PESAPAL_FEE_PERCENT)) / 100);
-}
 
 function corsHeaders(req: Request): Record<string, string> {
   const origin = req.headers.get("origin");
@@ -86,8 +70,7 @@ export async function POST(req: Request) {
     }
 
     const merchantReference = `MH-${Date.now()}-${randomBytes(3).toString("hex")}`;
-    const amountIncludingVat = Math.round((pkg.price * VAT_MULTIPLIER_PERCENT) / 100);
-    const chargedAmount = addPesapalFee(amountIncludingVat);
+    const { amount: amountIncludingVat, chargedAmount } = checkoutAmounts(pkg.price);
 
     await db.pesapalPayment.create({
       data: {

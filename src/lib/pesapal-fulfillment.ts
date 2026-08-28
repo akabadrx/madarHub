@@ -22,10 +22,27 @@ export async function fulfillPesapalPayment(merchantReference: string, orderTrac
       const payment = await tx.pesapalPayment.findUnique({ where: { merchantReference } });
       if (!payment || payment.status === "COMPLETED" || payment.status === "FAILED") return payment;
 
+      // A membership-portal order already carries the Lead of the signed-in
+      // member, so there is nothing to guess. Only a public website order has
+      // to be matched back to a person by phone number.
+      let lead = payment.leadId
+        ? await tx.lead.findUnique({ where: { id: payment.leadId } })
+        : null;
+
       const phone = payment.customerPhone ? normalizePhone(payment.customerPhone) : null;
-      let lead = phone ? await tx.lead.findFirst({ where: { phone } }) : null;
+      if (!lead && phone) {
+        lead = await tx.lead.findFirst({ where: { phone } });
+      }
 
       if (!lead) {
+        // The status has to follow what was actually bought. Booking every
+        // online payer as a day pass told a member who paid for a monthly
+        // package that they were on a day pass.
+        const pkg = payment.packageId
+          ? await tx.package.findUnique({ where: { id: payment.packageId } })
+          : null;
+        const status = pkg?.billingType === "monthly" ? "Paid Monthly" : "Paid Day Pass";
+
         lead = await tx.lead.create({
           data: {
             name: payment.customerName,
@@ -33,7 +50,7 @@ export async function fulfillPesapalPayment(merchantReference: string, orderTrac
             source: "Website",
             interest: payment.packageName,
             suggestedPackageId: payment.packageId,
-            status: "Paid Day Pass",
+            status,
             paymentStatus: "Paid",
             amountPaid: payment.amount,
             notes: `Created from an online Pesapal payment for ${payment.packageName}.`,
