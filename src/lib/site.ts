@@ -20,3 +20,17 @@ export function siteUrl(path: string): string {
 
 export const WHATSAPP_NUMBER = "250783662543";
 export const WHATSAPP_URL = `https://wa.me/${WHATSAPP_NUMBER}`;
+
+/**
+ * Absolute URL for a page in this portal.
+ *
+ * Redirects must not be built from `request.url`: behind PM2 the standalone
+ * server reports its bind address, so a redirect built that way points at
+ * http://0.0.0.0:3201 and dies in the browser. The configured public URL is the
+ * only reliable source.
+ */
+export function portalUrl(path = "/"): string {
+  const base = (process.env.NEXT_PUBLIC_APP_URL || "https://madarorbit.com/membership").replace(/\/$/, "");
+  const suffix = path === "/" ? "" : path.startsWith("/") ? path : `/${path}`;
+  return `${base}${suffix}`;
+}
