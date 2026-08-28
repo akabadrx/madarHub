@@ -6,7 +6,7 @@
 
 type SendArgs = { to: string; subject: string; html: string };
 
-export async function sendEmail({ to, subject, html }: SendArgs): Promise<{ sent: boolean }> {
+export async function sendEmail({ to, subject, html }: SendArgs): Promise<{ sent: boolean; id?: string }> {
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.EMAIL_FROM || "Madar Hub <onboarding@resend.dev>";
 
@@ -22,10 +22,17 @@ export async function sendEmail({ to, subject, html }: SendArgs): Promise<{ sent
   });
 
   if (!response.ok) {
-    console.error(`[mail] Resend returned ${response.status} for "${subject}"`);
+    const detail = await response.text().catch(() => "");
+    console.error(`[mail] Resend returned ${response.status} for "${subject}": ${detail.slice(0, 300)}`);
     return { sent: false };
   }
-  return { sent: true };
+
+  // Resend's id is the only handle on a message afterwards. Without it a
+  // "member says the email never arrived" report cannot be traced past our own
+  // logs, so record it against the recipient.
+  const { id } = (await response.json().catch(() => ({}))) as { id?: string };
+  console.log(`[mail] Sent "${subject}" to ${to}${id ? ` (resend id ${id})` : ""}`);
+  return { sent: true, id };
 }
 
 /** Brand-matched wrapper, same navy/gold treatment as the CRM's emails. */
