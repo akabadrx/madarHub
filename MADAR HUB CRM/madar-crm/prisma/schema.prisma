@@ -56,6 +56,7 @@ model Lead {
   interactions    Interaction[]
   pesapalPayments PesapalPayment[]
   portalInvites   PortalInvite[]
+  reminderLogs    MemberReminderLog[]
 
   @@index([status])
   @@index([followUpDate])
@@ -176,4 +177,22 @@ model PortalInvite {
   createdAt  DateTime  @default(now())
 
   @@index([leadId, createdAt])
+}
+
+// One row per reminder actually sent to a member, so a daily cron cannot mail
+// the same person about the same due date twice. The unique constraint is the
+// guarantee — the code does not have to remember.
+model MemberReminderLog {
+  id      String   @id @default(cuid())
+  leadId  String
+  lead    Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  // The nextPaymentDate this reminder was about, at day precision.
+  dueDate DateTime
+  // "due_soon" (3 days before) | "due_now" (due date passed) | "final_notice"
+  stage   String
+  sentTo  String
+  sentAt  DateTime @default(now())
+
+  @@unique([leadId, dueDate, stage])
+  @@index([sentAt])
 }
