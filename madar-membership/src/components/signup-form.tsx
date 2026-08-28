@@ -6,11 +6,18 @@ import { MIN_PASSWORD_LENGTH } from "@/lib/password-constants";
 
 const initialState: FormState = {};
 
-export function SignupForm() {
+export function SignupForm({
+  invite,
+  prefill,
+}: {
+  invite?: string;
+  prefill?: { fullName?: string | null; phone?: string | null };
+} = {}) {
   const [state, formAction, pending] = useActionState(signup, initialState);
 
   return (
     <form className="mp-form" action={formAction} noValidate>
+      {invite ? <input type="hidden" name="invite" value={invite} /> : null}
       {state.error ? (
         <p className="mp-alert error" role="alert">
           {state.error}
@@ -25,7 +32,7 @@ export function SignupForm() {
           type="text"
           autoComplete="name"
           required
-          defaultValue={state.values?.fullName ?? ""}
+          defaultValue={state.values?.fullName ?? prefill?.fullName ?? ""}
           placeholder="Your name"
         />
       </div>
@@ -53,7 +60,7 @@ export function SignupForm() {
           autoComplete="tel"
           inputMode="tel"
           required
-          defaultValue={state.values?.phone ?? ""}
+          defaultValue={state.values?.phone ?? prefill?.phone ?? ""}
           placeholder="078xxxxxxx"
         />
       </div>

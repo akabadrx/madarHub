@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { AlertTriangle, Banknote, CalendarCheck2, MessageCircle, Plus, Search, UserRoundCheck, Users } from "lucide-react";
+import { AlertTriangle, Banknote, CalendarCheck2, MessageCircle, Plus, Search, ShieldCheck, UserRoundCheck, Users } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
+import { PortalInviteButton } from "@/components/portal-invite-button";
 import { ACTIVE_MEMBER_STATUSES } from "@/lib/constants";
 import { getDb } from "@/lib/db";
 import { getMembershipPaymentStatus } from "@/lib/membership";
@@ -132,7 +133,7 @@ export default async function MembersPage({
         <div className="table-wrap">
           <table className="data-table mobile-card-table">
             <thead>
-              <tr><th>Member</th><th>Plan</th><th>Status</th><th>Last payment</th><th>Next payment</th><th>Payment status</th><th>This month</th><th>Total paid</th><th>Actions</th></tr>
+              <tr><th>Member</th><th>Plan</th><th>Status</th><th>Last payment</th><th>Next payment</th><th>Payment status</th><th>Portal</th><th>This month</th><th>Total paid</th><th>Actions</th></tr>
             </thead>
             <tbody>
               {members.map((member) => {
@@ -160,6 +161,15 @@ export default async function MembersPage({
                           )}
                         </div>
                       ) : "—"}
+                    </td>
+                    <td>
+                      {member.portalLinkedAt ? (
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
+                          <ShieldCheck size={13} />On portal
+                        </span>
+                      ) : (
+                        <PortalInviteButton leadId={member.id} linked={false} className="btn btn-outline min-h-9 px-2.5 text-xs" />
+                      )}
                     </td>
                     <td className="font-semibold text-emerald-700">{formatRwf(monthlyRevenueByMember.get(member.id) || 0)}</td>
                     <td className="font-semibold">{formatRwf(member.amountPaid)}</td>

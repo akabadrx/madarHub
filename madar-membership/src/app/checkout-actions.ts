@@ -8,6 +8,7 @@ import {
   findLeadByPhone,
   getLead,
   getPackageBySlug,
+  markLeadPortalLinked,
 } from "@/lib/crm";
 import { getDb } from "@/lib/db";
 import { normalizePhone } from "@/lib/utils";
@@ -121,5 +122,6 @@ export async function linkAccountToLead(
     await db.membershipUser.update({ where: { id: userId }, data: { leadId: lead.id } });
   }
   await backfillLeadEmail(lead.id, email);
+  await markLeadPortalLinked(lead.id);
   return lead.id;
 }
