@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { exchangeCodeForProfile, isGoogleConfigured } from "@/lib/google";
 import { startSession } from "@/lib/session";
-import { findLeadByPhone } from "@/lib/crm";
+import { linkAccountToLead } from "@/app/checkout-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -60,9 +60,9 @@ export async function GET(request: Request) {
       });
       userId = existing.id;
     } else {
-      // New account straight from Google. There is no phone number in a Google
-      // profile, so this account starts unlinked; the member can add their
-      // number later and be matched to their CRM record then.
+      // New account straight from Google. It carries no phone number, but the
+      // email below is the primary identifier, so the link attempt after this
+      // block can still match it to an existing member.
       const created = await db.$transaction(async (tx) => {
         const user = await tx.membershipUser.create({
           data: {
@@ -87,19 +87,11 @@ export async function GET(request: Request) {
   });
   if (!user || user.disabledAt) return fail(request, "google_failed");
 
-  // If a phone was added since last sign-in but no CRM record was matched then,
-  // try again now.
-  if (!user.leadId && user.phone) {
-    const lead = await findLeadByPhone(user.phone);
-    if (lead) {
-      const claimed = await db.membershipUser.findUnique({
-        where: { leadId: lead.id },
-        select: { id: true },
-      });
-      if (!claimed) {
-        await db.membershipUser.update({ where: { id: user.id }, data: { leadId: lead.id } });
-      }
-    }
+  // A Google account carries no phone number, so email is the only identifier
+  // available here — and it is the primary one, so a member whose address is on
+  // their CRM record is connected on their first sign-in.
+  if (!user.leadId) {
+    await linkAccountToLead(user.id, profile.email, user.phone);
   }
 
   await db.membershipUser.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });

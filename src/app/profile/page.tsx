@@ -52,8 +52,8 @@ export default async function ProfilePage() {
                   <span className="mp-badge none">Not connected yet</span>
                   <p className="mp-stat-sub">
                     {user.phone
-                      ? "We have not found a Madar Hub membership under this phone number yet. If you already use the space, message us on WhatsApp and we will connect it."
-                      : "Add your phone number to connect this account to your Madar Hub membership. You will also need it to pay online."}
+                      ? "We have not found a Madar Hub membership under this email address or phone number yet. If you already use the space, message us on WhatsApp and we will connect it."
+                      : "We have not found a membership under this email address yet. Add your phone number so we can check that too — you will also need it to pay online."}
                   </p>
                   <p className="mp-stat-sub" style={{ marginTop: 12 }}>
                     <a

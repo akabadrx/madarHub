@@ -2,7 +2,13 @@
 
 import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/session";
-import { findLeadByPhone, getLead, getPackageBySlug } from "@/lib/crm";
+import {
+  backfillLeadEmail,
+  findLeadByEmail,
+  findLeadByPhone,
+  getLead,
+  getPackageBySlug,
+} from "@/lib/crm";
 import { getDb } from "@/lib/db";
 import { normalizePhone } from "@/lib/utils";
 
@@ -76,26 +82,44 @@ export async function startCheckout(_prev: CheckoutState, formData: FormData): P
 }
 
 /**
- * Links a member account to its CRM Lead once a matching phone number exists —
- * for accounts created before the member had a record, and for Google sign-ups,
- * which carry no phone number at all. Returns the linked Lead id, so a caller
- * can use it straight away without re-reading the session.
+ * Connects a member account to its CRM Lead.
+ *
+ * Email is the primary identifier: it is what the member signs in with, it is
+ * stable when someone changes SIM, and it is unique per account. Phone is only
+ * consulted when no Lead carries the address, because every member who predates
+ * email collection is reachable by number alone — matching on email only would
+ * strand them.
+ *
+ * Whenever a match is made, the member's email is written back to the Lead if
+ * it has none, so the CRM accumulates addresses and email becomes primary in
+ * practice rather than just in intent.
+ *
+ * Returns the linked Lead id, so a caller can use it without re-reading the
+ * session.
  */
-export async function linkAccountToLeadIfPossible(
+export async function linkAccountToLead(
   userId: string,
+  email: string,
   phone: string | null,
 ): Promise<string | null> {
-  if (!phone) return null;
   const db = getDb();
-  const lead = await findLeadByPhone(normalizePhone(phone));
+
+  let lead = await findLeadByEmail(email);
+  if (!lead && phone) {
+    lead = await findLeadByPhone(normalizePhone(phone));
+  }
   if (!lead) return null;
 
+  // A Lead already claimed by someone else must not be taken over.
   const claimed = await db.membershipUser.findUnique({
     where: { leadId: lead.id },
     select: { id: true },
   });
-  if (claimed) return null;
+  if (claimed && claimed.id !== userId) return null;
 
-  await db.membershipUser.update({ where: { id: userId }, data: { leadId: lead.id } });
+  if (!claimed) {
+    await db.membershipUser.update({ where: { id: userId }, data: { leadId: lead.id } });
+  }
+  await backfillLeadEmail(lead.id, email);
   return lead.id;
 }

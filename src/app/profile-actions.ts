@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { getDb } from "@/lib/db";
 import { getSessionUser } from "@/lib/session";
-import { linkAccountToLeadIfPossible } from "@/app/checkout-actions";
+import { linkAccountToLead } from "@/app/checkout-actions";
 import { normalizePhone } from "@/lib/utils";
 
 export type ProfileState = {
@@ -65,7 +65,7 @@ export async function updateProfile(_prev: ProfileState, formData: FormData): Pr
 
   // A new or corrected number may now match the member's CRM record, which is
   // what makes their real status and payment history appear.
-  const linkedNow = !user.leadId ? await linkAccountToLeadIfPossible(user.id, phone) : null;
+  const linkedNow = !user.leadId ? await linkAccountToLead(user.id, user.email, phone) : null;
 
   revalidatePath("/");
   revalidatePath("/profile");

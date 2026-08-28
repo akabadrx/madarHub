@@ -17,6 +17,7 @@ export type CrmLead = {
   id: string;
   name: string | null;
   phone: string;
+  email: string | null;
   status: string;
   interest: string | null;
 };
@@ -44,13 +45,15 @@ export type CrmCatalogPackage = {
 };
 
 /**
- * Finds the CRM Lead for a normalised phone number, so a member who signs up is
- * connected to the record staff already keep for them. Returns null for someone
- * with no history — they get an account, just no membership yet.
+ * Finds the CRM Lead for a normalised phone number.
+ *
+ * Phone is the fallback identifier, not the primary one — see findLeadByEmail.
+ * It exists because every member predating email collection is only reachable
+ * by number.
  */
 export async function findLeadByPhone(normalizedPhone: string): Promise<CrmLead | null> {
   const rows = await getDb().$queryRaw<CrmLead[]>`
-    SELECT id, name, phone, status, interest
+    SELECT id, name, phone, email, status, interest
     FROM public."Lead"
     WHERE phone = ${normalizedPhone}
     ORDER BY "updatedAt" DESC
@@ -61,7 +64,7 @@ export async function findLeadByPhone(normalizedPhone: string): Promise<CrmLead 
 
 export async function getLead(leadId: string): Promise<CrmLead | null> {
   const rows = await getDb().$queryRaw<CrmLead[]>`
-    SELECT id, name, phone, status, interest
+    SELECT id, name, phone, email, status, interest
     FROM public."Lead"
     WHERE id = ${leadId}
     LIMIT 1
@@ -130,4 +133,41 @@ export async function getPackageBySlug(slug: string): Promise<CrmCatalogPackage 
     LIMIT 1
   `;
   return rows[0] ?? null;
+}
+
+/**
+ * Finds the CRM Lead for an email address. This is the primary way an account
+ * is matched to a membership; phone is only consulted when no email matches.
+ *
+ * Compared case-insensitively because staff enter these by hand.
+ */
+export async function findLeadByEmail(email: string): Promise<CrmLead | null> {
+  const normalized = email.trim().toLowerCase();
+  if (!normalized) return null;
+  const rows = await getDb().$queryRaw<CrmLead[]>`
+    SELECT id, name, phone, email, status, interest
+    FROM public."Lead"
+    WHERE lower(email) = ${normalized}
+    ORDER BY "updatedAt" DESC
+    LIMIT 1
+  `;
+  return rows[0] ?? null;
+}
+
+/**
+ * Records the member's email on their CRM Lead when it has none.
+ *
+ * This is what makes email genuinely primary over time: members matched today
+ * by phone become matchable by email tomorrow, and staff get an address they
+ * can actually write to. An existing email is never overwritten — staff may
+ * have entered it deliberately.
+ */
+export async function backfillLeadEmail(leadId: string, email: string): Promise<void> {
+  const normalized = email.trim().toLowerCase();
+  if (!normalized) return;
+  await getDb().$executeRaw`
+    UPDATE public."Lead"
+    SET email = ${normalized}, "updatedAt" = now()
+    WHERE id = ${leadId} AND (email IS NULL OR email = '')
+  `;
 }

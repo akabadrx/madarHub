@@ -5,8 +5,8 @@ import { redirect } from "next/navigation";
 import { getDb } from "@/lib/db";
 import { hashPassword, hashToken, verifyPassword } from "@/lib/password";
 import { endSession, startSession } from "@/lib/session";
-import { findLeadByPhone } from "@/lib/crm";
 import { emailLayout, sendEmail } from "@/lib/mail";
+import { linkAccountToLead } from "@/app/checkout-actions";
 import { normalizeEmail, normalizePhone } from "@/lib/utils";
 import {
   forgotPasswordSchema,
@@ -117,30 +117,22 @@ export async function signup(_prev: FormState, formData: FormData): Promise<Form
     return { error: "An account with this phone number already exists. Log in instead.", values };
   }
 
-  // Connect the new account to the record staff already keep for this person,
-  // so an existing member sees their real status and payment history straight
-  // away instead of an empty account. Someone with no history still gets an
-  // account, they simply have no membership on it yet.
-  const lead = await findLeadByPhone(phone);
-  let leadId: string | null = null;
-  if (lead) {
-    const alreadyClaimed = await db.membershipUser.findUnique({
-      where: { leadId: lead.id },
-      select: { id: true },
-    });
-    if (!alreadyClaimed) leadId = lead.id;
-  }
-
   const user = await db.membershipUser.create({
     data: {
       email,
       phone,
       fullName: parsed.data.fullName.trim(),
       passwordHash: await hashPassword(parsed.data.password),
-      leadId,
     },
     select: { id: true },
   });
+
+  // Connect the new account to the record staff already keep for this person,
+  // so an existing member sees their real status and payment history straight
+  // away instead of an empty account. Matched on email first, then phone.
+  // Someone with no history still gets an account, they simply have no
+  // membership on it yet.
+  await linkAccountToLead(user.id, email, phone);
 
   await startSession(user.id, true);
   redirect("/");

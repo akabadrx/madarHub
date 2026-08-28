@@ -55,8 +55,8 @@ export function ProfileForm({
         />
       </div>
       <p className="mp-hint">
-        Use the number Madar Hub already has for you. It is how we connect this account to your
-        membership, and how mobile money reaches you at checkout.
+        Needed for mobile money at checkout. We also use it to find your membership if your
+        email is not on your Madar Hub record yet.
       </p>
 
       <div className="field">
@@ -64,8 +64,8 @@ export function ProfileForm({
         <input id="email" type="email" value={email} readOnly disabled />
       </div>
       <p className="mp-hint">
-        Your email is how you sign in, so it cannot be changed here. Message us on WhatsApp if you
-        need it updated.
+        Your email identifies your membership and is how you sign in, so it cannot be changed
+        here. Message us on WhatsApp if you need it updated.
       </p>
 
       <button className="button primary" type="submit" disabled={pending}>
