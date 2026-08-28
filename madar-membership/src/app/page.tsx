@@ -76,11 +76,14 @@ export default async function DashboardPage({
               <h1>Hello, {firstName}</h1>
               <p>{user.email}</p>
             </div>
-            <form action={logout}>
-              <button className="mp-logout" type="submit">
-                Log out
-              </button>
-            </form>
+            <div className="mp-dash-actions">
+              <a href="/membership/profile">Your details</a>
+              <form action={logout}>
+                <button className="mp-logout" type="submit">
+                  Log out
+                </button>
+              </form>
+            </div>
           </div>
 
           {notice ? (
@@ -166,11 +169,23 @@ export default async function DashboardPage({
               </div>
             ) : null}
 
-            <PackagePicker
-              packages={packages}
-              currentSlug={currentSlug}
-              renewLabel={paymentDue ? "Renew now" : currentSlug ? "Pay now" : "Continue to payment"}
-            />
+            {user.phone ? (
+              <PackagePicker
+                packages={packages}
+                currentSlug={currentSlug}
+                renewLabel={paymentDue ? "Renew now" : currentSlug ? "Pay now" : "Continue to payment"}
+              />
+            ) : (
+              <div className="mp-due">
+                <p style={{ margin: "0 0 14px" }}>
+                  Add your phone number before paying online. Pesapal uses it to reach your mobile
+                  money account, and it is how we connect you to your Madar Hub membership.
+                </p>
+                <a className="button primary" href="/membership/profile">
+                  Add your phone number
+                </a>
+              </div>
+            )}
           </section>
 
           <section className="mp-panel" style={{ marginTop: 20 }}>
