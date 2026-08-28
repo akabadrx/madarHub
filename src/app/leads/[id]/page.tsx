@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Bot, CalendarClock, CalendarDays, CreditCard, Edit3, Languages, Mail, MapPin, MessageCircle, Phone, Sparkles, Tag, Users, Wrench } from "lucide-react";
 import { CopyButton } from "@/components/copy-button";
+import { PortalInviteButton } from "@/components/portal-invite-button";
 import { NoteForm } from "@/components/note-form";
 import { PageHeader } from "@/components/page-header";
 import { PaymentForm } from "@/components/payment-form";
@@ -30,7 +31,7 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
   const memberPackage = latestPayment?.package || lead.suggestedPackage;
   const membershipInfo = getMembershipPaymentStatus(memberPackage, latestPayment?.paymentDate, latestPayment?.amount);
   return <>
-    <PageHeader eyebrow="Lead profile" title={name} description={`${lead.source} · Created ${formatDate(lead.createdAt)}`} action={<div className="flex flex-wrap gap-2"><a href={whatsappUrl(lead.phone)} target="_blank" rel="noreferrer" className="btn bg-[#168b5b] text-white"><MessageCircle size={17} />WhatsApp</a><Link href="/lead-assistant" className="btn btn-outline"><Bot size={16} />AI Lead Assistant</Link><Link href={`/leads/${lead.id}/edit`} className="btn btn-outline"><Edit3 size={16} />Edit</Link></div>} />
+    <PageHeader eyebrow="Lead profile" title={name} description={`${lead.source} · Created ${formatDate(lead.createdAt)}`} action={<div className="flex flex-wrap gap-2"><a href={whatsappUrl(lead.phone)} target="_blank" rel="noreferrer" className="btn bg-[#168b5b] text-white"><MessageCircle size={17} />WhatsApp</a><Link href="/lead-assistant" className="btn btn-outline"><Bot size={16} />AI Lead Assistant</Link><Link href={`/leads/${lead.id}/edit`} className="btn btn-outline"><Edit3 size={16} />Edit</Link><PortalInviteButton leadId={lead.id} linked={Boolean(lead.portalLinkedAt)} /></div>} />
     {lead.aiSummary && <div className="card flex items-start gap-4 border-[#eadcae] bg-[#fffaf0] p-5"><div className="rounded-xl bg-[#fff5d8] p-2.5 text-[#9a7110]"><Sparkles size={20} /></div><div className="min-w-0 flex-1"><p className="text-xs font-bold uppercase tracking-wide text-[#9a7110]">Rolling AI memory</p><p className="mt-1 text-sm leading-6 text-slate-700">{lead.aiSummary}</p></div>{aiBadge != null && <span className="shrink-0 rounded-full bg-[#0b1f3a] px-2.5 py-1 text-xs font-semibold text-white">{aiBadge}%</span>}</div>}
     <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
       <div className="space-y-4">

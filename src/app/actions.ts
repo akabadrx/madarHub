@@ -145,3 +145,22 @@ export async function updatePackage(formData: FormData) {
   await getDb().package.update({ where: { id }, data: { name, price, billingType, description: description || null } });
   refreshCrm();
 }
+
+/**
+ * Issues a portal invite for a lead and hands back a WhatsApp link with the
+ * message ready to send. Staff click through to their own WhatsApp and press
+ * send, which is how every other message to a member already goes out.
+ */
+export async function issuePortalInvite(leadId: string) {
+  const { createPortalInvite } = await import("@/lib/portal-invite");
+  const invite = await createPortalInvite(leadId);
+  await getDb().interaction.create({
+    data: {
+      leadId,
+      type: "note",
+      content: "Portal invite link generated and sent on WhatsApp.",
+    },
+  });
+  revalidatePath(`/leads/${leadId}`);
+  return { whatsappUrl: invite.whatsappUrl, signupUrl: invite.signupUrl };
+}

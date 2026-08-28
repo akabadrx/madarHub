@@ -18,6 +18,10 @@ model Lead {
   // record by email first, falling back to phone for the members who predate
   // email collection. Not unique — historic rows may share or lack one.
   email               String?
+  // Set by the portal when a member account is connected to this record, so
+  // staff can see who is on the portal without the CRM reaching into the
+  // portal's own schema.
+  portalLinkedAt      DateTime?
   source              String
   interest            String?
   suggestedPackageId  String?
@@ -51,6 +55,7 @@ model Lead {
   visits          Visit[]
   interactions    Interaction[]
   pesapalPayments PesapalPayment[]
+  portalInvites   PortalInvite[]
 
   @@index([status])
   @@index([followUpDate])
@@ -154,4 +159,21 @@ model PesapalPayment {
 
   @@index([status])
   @@index([customerEmail])
+}
+
+// A one-time link staff send a member so they can create a portal account.
+// Most members arrive by WhatsApp or walk in, so the invite is what brings them
+// onto the portal; the token also guarantees the new account attaches to the
+// right Lead instead of relying on them typing a matching phone number.
+model PortalInvite {
+  id         String    @id @default(cuid())
+  leadId     String
+  lead       Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  // sha256 of the emailed/messaged token; the raw value is never stored.
+  tokenHash  String    @unique
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([leadId, createdAt])
 }
