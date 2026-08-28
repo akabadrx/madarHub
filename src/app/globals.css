@@ -223,7 +223,10 @@
  */
 
 .mp-dash {
-  width: min(1060px, calc(100% - 48px));
+  /* Matches the marketing site container, so the package cards get the same
+     width they have on the pricing page. Narrower columns made the same copy
+     wrap into much taller cards. */
+  width: min(var(--container), calc(100% - 48px));
   margin-inline: auto;
   padding: 40px 0 96px;
 }

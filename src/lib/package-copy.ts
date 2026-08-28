@@ -1,17 +1,19 @@
 // Package presentation copy, lifted verbatim from the marketing site's
-// pricing.html so a signed-in member sees exactly the same card they would see
-// on the public pricing page.
+// pricing.html so a signed-in member sees exactly the card a visitor sees.
 //
-// The bullets, tagline and "best for" line live in that page as hand-written
-// HTML rather than in the CRM catalogue, so they are mirrored here. Prices,
-// names and availability still come from the database at request time - only
-// this descriptive copy is duplicated.
+// The bullets, tagline, badge and "best for" line live in that page as
+// hand-written HTML rather than in the CRM catalogue, so they are mirrored
+// here. Prices, names and availability still come from the database at request
+// time - only this descriptive copy is duplicated.
 //
 // If a package's copy changes on the pricing page, update the matching entry
 // here. A package with no entry falls back to its CRM description.
 
 export type PackageCopy = {
   kind: string;
+  badge: string | null;
+  capacity: string | null;
+  featured: boolean;
   tagline: string;
   benefits: string[];
   moreBenefits: string[];
@@ -22,6 +24,9 @@ export type PackageCopy = {
 export const PACKAGE_COPY: Record<string, PackageCopy> = {
   "coworking-day-pass": {
     "kind": "Day Pass",
+    "badge": null,
+    "capacity": null,
+    "featured": false,
     "tagline": "A flexible one-day pass for anyone who needs a quiet, professional place to work, study, or take online meetings.",
     "benefits": [
       "Coworking space access for the day",
@@ -38,6 +43,9 @@ export const PACKAGE_COPY: Record<string, PackageCopy> = {
   },
   "fixed-desk-monthly": {
     "kind": "Monthly Membership",
+    "badge": null,
+    "capacity": null,
+    "featured": false,
     "tagline": "A monthly membership for people who need a consistent workspace and their own dedicated desk at Madar Hub.",
     "benefits": [
       "Your own fixed desk for the month",
@@ -56,6 +64,9 @@ export const PACKAGE_COPY: Record<string, PackageCopy> = {
   },
   "virtual-business-address": {
     "kind": "Monthly Service",
+    "badge": null,
+    "capacity": null,
+    "featured": false,
     "tagline": "A professional business address in Kigali for registration and official correspondence — ideal for freelancers, consultants, and small companies.",
     "benefits": [
       "Use of Madar Hub's physical address for business registration support",
@@ -73,6 +84,9 @@ export const PACKAGE_COPY: Record<string, PackageCopy> = {
   },
   "fixed-desk-virtual-address": {
     "kind": "Monthly Bundle",
+    "badge": "Most Popular",
+    "capacity": null,
+    "featured": true,
     "tagline": "The best of both — a real working desk plus professional business address support, in one package.",
     "benefits": [
       "Your own fixed desk for the month",
@@ -93,7 +107,10 @@ export const PACKAGE_COPY: Record<string, PackageCopy> = {
     "moreLabel": "Full package details"
   },
   "private-team-room": {
-    "kind": "Monthly &middot; Teams &middot; No Coffee Included",
+    "kind": "Monthly · Teams · No Coffee Included",
+    "badge": null,
+    "capacity": "Up to 6 registered members",
+    "featured": false,
     "tagline": "A dedicated private room with all core team benefits. Coffee is not included and can be ordered at a special member rate.",
     "benefits": [
       "Dedicated private room",
@@ -117,7 +134,10 @@ export const PACKAGE_COPY: Record<string, PackageCopy> = {
     "moreLabel": "Full package details"
   },
   "private-team-room-coffee": {
-    "kind": "Monthly &middot; Teams &middot; Coffee Included",
+    "kind": "Monthly · Teams · Coffee Included",
+    "badge": null,
+    "capacity": "Up to 6 registered members",
+    "featured": true,
     "tagline": "The full private team room package with coffee included for registered team members.",
     "benefits": [
       "Dedicated private room",
@@ -141,6 +161,9 @@ export const PACKAGE_COPY: Record<string, PackageCopy> = {
   },
   "student-study-pass": {
     "kind": "Student Day Pass",
+    "badge": null,
+    "capacity": null,
+    "featured": false,
     "tagline": "An affordable, quiet study space for students working on assignments, research, or exam preparation.",
     "benefits": [
       "Internet access",
@@ -156,6 +179,9 @@ export const PACKAGE_COPY: Record<string, PackageCopy> = {
   },
   "meeting-room-half-day": {
     "kind": "4-Hour / 6-Hour Rental",
+    "badge": null,
+    "capacity": null,
+    "featured": false,
     "tagline": "A private meeting room for meetings, interviews, client discussions, online calls, and planning sessions.",
     "benefits": [
       "Private meeting room access",
@@ -170,7 +196,10 @@ export const PACKAGE_COPY: Record<string, PackageCopy> = {
     "moreLabel": "Full package details"
   },
   "training-room-daily": {
-    "kind": "Full Day &middot; Up to 12 Hours",
+    "kind": "Full Day · Up to 12 Hours",
+    "badge": null,
+    "capacity": null,
+    "featured": false,
     "tagline": "A training-friendly room setup for workshops, training programs, small classes, presentations, and learning sessions.",
     "benefits": [
       "Room access for the day",
@@ -186,3 +215,23 @@ export const PACKAGE_COPY: Record<string, PackageCopy> = {
     "moreLabel": "Full package details"
   }
 };
+
+
+/**
+ * The order packages are shown to a member. Cheapest-first is the right default
+ * for a stranger comparing prices; a member is choosing between things they
+ * might actually use, so the everyday options lead. Anything not listed here
+ * falls to the end, keeping its catalogue order.
+ */
+export const PACKAGE_ORDER: string[] = [
+  "coworking-day-pass",
+  "fixed-desk-monthly",
+  "virtual-business-address",
+  "student-study-pass",
+  "meeting-room-half-day",
+  "fixed-desk-virtual-address",
+  "meeting-room-full-day",
+  "training-room-daily",
+  "private-team-room",
+  "private-team-room-coffee"
+];
