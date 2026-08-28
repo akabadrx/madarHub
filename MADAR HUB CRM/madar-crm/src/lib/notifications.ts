@@ -80,7 +80,7 @@ export function buildDigestHtml(overdue: { id: string; name: string | null; phon
     </div>
     <div style="background:#fff;border-radius:0 0 12px 12px;padding:28px;border:1px solid #e2e8f0;border-top:none;">
       <p style="color:#64748b;font-size:14px;margin:0 0 4px 0;">${dateStr}</p>
-      <p style="color:#0b1f3a;font-size:18px;font-weight:600;margin:0 0 16px 0;">${total === 0 ? "No follow-ups pending today." : `${total} lead${total > 1 ? "s" : ""} need attention.`}</p>
+      <p style="color:#0b1f3a;font-size:18px;font-weight:600;margin:0 0 16px 0;">${total === 0 ? "No follow-ups pending today." : `${total} lead${total > 1 ? "s" : ""} need${total > 1 ? "" : "s"} attention.`}</p>
       ${total === 0 ? `<p style="color:#64748b;font-size:14px;">You're all caught up. Check back tomorrow or visit the CRM dashboard.</p>` : sections.join("")}
       <div style="margin-top:32px;padding-top:20px;border-top:1px solid #e2e8f0;">
         <a href="${crmBaseUrl}/follow-ups" style="display:inline-block;background:#d4a72c;color:#0b1f3a;font-weight:600;font-size:14px;padding:10px 24px;border-radius:8px;text-decoration:none;">Open follow-ups in CRM</a>
@@ -102,7 +102,7 @@ export async function sendFollowUpDigestEmail(opts: { to: string; from: string; 
   const html = buildDigestHtml(overdue, today, opts.crmBaseUrl);
   const subject = total === 0
     ? "Madar Hub CRM - No follow-ups today"
-    : `Madar Hub CRM - ${total} lead${total > 1 ? "s" : ""} need follow-up`;
+    : `Madar Hub CRM - ${total} lead${total > 1 ? "s" : ""} need${total > 1 ? "" : "s"} follow-up`;
 
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
