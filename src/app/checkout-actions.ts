@@ -34,7 +34,7 @@ export async function startCheckout(_prev: CheckoutState, formData: FormData): P
   if (phone.length < 9) {
     return {
       error:
-        "We need a phone number before you can pay online. Add yours on your profile, or book on WhatsApp.",
+        "Add your phone number under Your details before paying online, or book on WhatsApp.",
     };
   }
 
