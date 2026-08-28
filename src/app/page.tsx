@@ -174,11 +174,7 @@ export default async function DashboardPage({
             ) : null}
 
             {user.phone ? (
-              <PackagePicker
-                packages={packages}
-                currentSlug={currentSlug}
-                renewLabel={paymentDue ? "Renew now" : currentSlug ? "Pay now" : "Continue to payment"}
-              />
+              <PackagePicker packages={packages} currentSlug={currentSlug} />
             ) : (
               <div className="mp-due">
                 <p>
