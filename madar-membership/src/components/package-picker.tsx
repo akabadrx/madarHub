@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { startCheckout, type CheckoutState } from "@/app/checkout-actions";
-import { PACKAGE_COPY } from "@/lib/package-copy";
+import { PACKAGE_COPY, PACKAGE_ORDER } from "@/lib/package-copy";
 import { WHATSAPP_NUMBER } from "@/lib/site";
 import { checkoutAmounts } from "@/lib/pricing";
 import { formatRwf } from "@/lib/utils";
@@ -50,6 +50,12 @@ export function PackagePicker({
     return <p className="mp-empty">No packages are available for online payment right now.</p>;
   }
 
+  const rank = (slug: string) => {
+    const i = PACKAGE_ORDER.indexOf(slug);
+    return i === -1 ? PACKAGE_ORDER.length : i;
+  };
+  const ordered = [...packages].sort((a, b) => rank(a.slug) - rank(b.slug));
+
   return (
     <>
       {state.error ? (
@@ -59,7 +65,7 @@ export function PackagePicker({
       ) : null}
 
       <div className="card-grid three pricing-cards-desktop">
-        {packages.map((pkg) => {
+        {ordered.map((pkg) => {
           const copy = PACKAGE_COPY[pkg.slug];
           const isCurrent = pkg.slug === currentSlug;
           const busy = pending && submitting === pkg.slug;
@@ -68,7 +74,15 @@ export function PackagePicker({
           )}`;
 
           return (
-            <article className={`pricing-card${isCurrent ? " featured" : ""}`} key={pkg.slug}>
+            <article
+              className={`pricing-card${copy?.featured || isCurrent ? " featured" : ""}`}
+              key={pkg.slug}
+            >
+              {isCurrent ? (
+                <span className="badge">Your plan</span>
+              ) : copy?.badge ? (
+                <span className="badge">{copy.badge}</span>
+              ) : null}
               <span className="pricing-type">{copy?.kind ?? "Package"}</span>
               <h3>{pkg.name}</h3>
               <div className="pricing-price">
@@ -76,6 +90,7 @@ export function PackagePicker({
                   {pkg.price.toLocaleString("en-RW")}{" "}
                   <span>{CADENCE[pkg.billingType] ?? "RWF + VAT"}</span>
                 </div>
+                {copy?.capacity ? <span className="capacity">{copy.capacity}</span> : null}
               </div>
 
               {copy?.tagline || pkg.description ? (
