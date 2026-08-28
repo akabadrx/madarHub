@@ -171,3 +171,16 @@ export async function backfillLeadEmail(leadId: string, email: string): Promise<
     WHERE id = ${leadId} AND (email IS NULL OR email = '')
   `;
 }
+
+/**
+ * Records that a portal account is connected to this Lead, so the CRM can show
+ * staff who is on the portal without reading the portal's own schema. Set once
+ * and left alone, so it reads as "on the portal since".
+ */
+export async function markLeadPortalLinked(leadId: string): Promise<void> {
+  await getDb().$executeRaw`
+    UPDATE public."Lead"
+    SET "portalLinkedAt" = now()
+    WHERE id = ${leadId} AND "portalLinkedAt" IS NULL
+  `;
+}

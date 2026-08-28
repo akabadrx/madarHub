@@ -7,13 +7,21 @@ import { GoogleButton } from "@/components/google-button";
 import { isGoogleConfigured } from "@/lib/google";
 import { getSessionUser } from "@/lib/session";
 import { siteUrl } from "@/lib/site";
+import { readInvite } from "@/lib/invite";
 
 export const metadata: Metadata = { title: "Create an account" };
 
 export const dynamic = "force-dynamic";
 
-export default async function SignupPage() {
+export default async function SignupPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ invite?: string }>;
+}) {
   if (await getSessionUser()) redirect("/");
+
+  const { invite } = await searchParams;
+  const invited = await readInvite(invite);
 
   return (
     <>
@@ -23,11 +31,25 @@ export default async function SignupPage() {
           <div className="mp-shell-inner">
             <div className="mp-card">
               <div className="mp-card-head">
-                <h1>Create your account</h1>
-                <p>Manage your membership, payments and packages in one place.</p>
+                <h1>{invited ? "Welcome to Madar Hub" : "Create your account"}</h1>
+                <p>
+                  {invited
+                    ? "Your membership is ready to connect — just choose a password."
+                    : "Manage your membership, payments and packages in one place."}
+                </p>
               </div>
 
-              <SignupForm />
+              {invite && !invited ? (
+                <p className="mp-alert info" role="status" style={{ marginBottom: 20 }}>
+                  That invite link has expired or has already been used. You can still create an
+                  account below, or ask us on WhatsApp for a new link.
+                </p>
+              ) : null}
+
+              <SignupForm
+                invite={invited ? invite : undefined}
+                prefill={invited ? { fullName: invited.name, phone: invited.phone } : undefined}
+              />
 
               {isGoogleConfigured() ? (
                 <>
