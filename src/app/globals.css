@@ -561,9 +561,9 @@
 
 .mp-plans {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(268px, 1fr));
   gap: 12px;
-  margin-bottom: 22px;
+  margin-bottom: 0;
 }
 
 .mp-plan {
@@ -571,7 +571,7 @@
   display: block;
   border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 18px 20px;
+  padding: 20px 22px;
   cursor: pointer;
   background: var(--white);
   transition: border-color 200ms ease, box-shadow 200ms ease, background 200ms ease, transform 200ms ease;
@@ -606,6 +606,16 @@
 .mp-plan:focus-within { outline: 3px solid rgba(214, 168, 79, 0.28); outline-offset: 2px; }
 
 .mp-plan-body { display: grid; gap: 5px; padding-right: 28px; }
+
+.mp-plan-kind {
+  font-family: 'Montserrat', system-ui, sans-serif;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--gold-dark);
+  margin-bottom: 2px;
+}
 
 .mp-plan-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
@@ -646,11 +656,71 @@
   letter-spacing: 0;
 }
 
-.mp-plan-total { font-size: 0.78rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+/* What the package actually includes, carried straight from the CRM catalogue
+   so the dashboard and the pricing page can never describe a package
+   differently. */
+.mp-plan-detail {
+  font-size: 0.83rem;
+  line-height: 1.55;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.mp-plan.is-selected .mp-plan-detail { color: #6B5B33; }
+
+.mp-plan-total {
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  margin-top: 6px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+.mp-plan.is-selected .mp-plan-total { border-top-color: rgba(214, 168, 79, 0.35); }
+
+/* ---- grouping ---- */
+
+.mp-plan-group + .mp-plan-group { margin-top: 26px; }
+
+.mp-plan-group-title {
+  font-family: 'Montserrat', system-ui, sans-serif;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0 0 12px;
+}
+
+/* ---- actions ---- */
+
+.mp-plan-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 18px;
+  margin-top: 24px;
+}
 
 .mp-plan-submit { width: 100%; }
 
 @media (min-width: 620px) { .mp-plan-submit { width: auto; min-width: 250px; } }
+
+.mp-plan-more {
+  font-size: 0.87rem;
+  font-weight: 600;
+  color: var(--navy-secondary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--border);
+}
+
+.mp-plan-more:hover,
+.mp-plan-more:focus-visible {
+  color: var(--gold-dark);
+  text-decoration-color: var(--gold);
+}
 
 
 /* Badge for light surfaces. The .mp-chip variants sit on the navy card and
