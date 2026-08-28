@@ -137,6 +137,10 @@ model PesapalPayment {
   customerEmail     String
   customerPhone     String?
   status            String   @default("PENDING") // PENDING | COMPLETED | FAILED | ABANDONED
+  // Where the checkout started: "website" (public pricing page) or
+  // "membership" (a signed-in member paying from the portal). A membership
+  // order already knows its Lead, so fulfilment does not have to guess.
+  source            String   @default("website")
   pesapalTrackingId String?
   leadId            String?
   lead              Lead?    @relation(fields: [leadId], references: [id])

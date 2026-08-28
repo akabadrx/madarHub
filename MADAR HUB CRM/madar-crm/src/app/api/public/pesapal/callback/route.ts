@@ -7,7 +7,8 @@ import { fulfillPesapalPayment } from "@/lib/pesapal-fulfillment";
  *
  * The customer's browser is redirected here by Pesapal after checkout.
  * Verifies the transaction status (in case the IPN hasn't arrived yet) and
- * sends the customer back to a plain result page on the public site.
+ * sends the customer back to a result page: the public site for a website
+ * checkout, or the member portal for someone who paid while signed in there.
  */
 export async function GET(req: NextRequest) {
   const siteUrl = process.env.MADAR_SITE_URL || "";
@@ -34,6 +35,17 @@ export async function GET(req: NextRequest) {
       package: payment.packageName,
       amount: String(payment.chargedAmount ?? payment.amount),
     });
+
+    // Sending a signed-in member to the public result page would drop them out
+    // of the portal and make them navigate back in. Return them to their
+    // account instead, with the outcome in the query string.
+    if (payment.source === "membership") {
+      const portalUrl = process.env.MEMBER_PORTAL_URL || `${siteUrl}/membership`;
+      const outcome =
+        payment.status === "COMPLETED" ? "success" : payment.status === "FAILED" ? "failed" : "pending";
+      params.set("payment", outcome);
+      return NextResponse.redirect(`${portalUrl}?${params.toString()}`);
+    }
 
     if (payment.status === "COMPLETED") {
       return NextResponse.redirect(`${siteUrl}/payment-success.html?${params.toString()}`);

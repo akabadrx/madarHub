@@ -23,8 +23,9 @@ export const config = {
   // Protect everything except the login page, the cron routes (which have
   // their own bearer-token auth), the public Pesapal checkout/callback/IPN
   // routes (called by customers and by Pesapal itself, not logged-in staff),
+  // the internal server-to-server routes (guarded by INTERNAL_API_SECRET),
   // and framework/static assets.
   matcher: [
-    "/((?!login|api/notifications/daily-digest|api/notifications/payment-reminders|api/cron/pesapal-reconcile|api/public/pesapal|_next/static|_next/image|favicon.ico).*)",
+    "/((?!login|api/notifications/daily-digest|api/notifications/payment-reminders|api/cron/pesapal-reconcile|api/public/pesapal|api/internal/|_next/static|_next/image|favicon.ico).*)",
   ],
 };

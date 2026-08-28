@@ -27,6 +27,15 @@ DATABASE_URL="postgresql://postgres:password@localhost:5432/madar_crm"
 CRM_PASSWORD="choose-a-strong-shared-password"
 CRM_AUTH_SECRET="a-long-random-string-used-to-sign-sessions"
 
+# Server-to-server checkout from the membership portal. Must match
+# INTERNAL_API_SECRET in madar-membership/.env. Unset means members cannot pay
+# from the portal; the public website checkout is unaffected.
+INTERNAL_API_SECRET="a-long-random-string-shared-with-the-portal"
+
+# Where to send a member after they pay from the portal, so they land back in
+# their account rather than on the public payment result page.
+MEMBER_PORTAL_URL="https://madarorbit.com/membership"
+
 # Claude-powered lead assistant (optional; mock replies are used when omitted)
 ANTHROPIC_API_KEY="sk-ant-..."
 
