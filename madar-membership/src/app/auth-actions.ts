@@ -191,7 +191,7 @@ export async function requestPasswordReset(
   const resetUrl = `${appUrl}/reset-password?token=${token}`;
   const firstName = user.fullName.split(" ")[0] || "there";
 
-  await sendEmail({
+  const { sent } = await sendEmail({
     to: user.email,
     subject: "Reset your Madar Hub password",
     html: emailLayout(
@@ -206,6 +206,17 @@ export async function requestPasswordReset(
        </p>`,
     ),
   });
+
+  // With no mail provider configured nothing was delivered, and the member has
+  // no way to continue. Print the link so an admin can pass it on and so the
+  // flow is testable before Resend is set up. This only happens in a state
+  // where password reset is already broken; once RESEND_API_KEY is set, the
+  // link is never written to the logs.
+  if (!sent) {
+    console.warn(
+      `[password-reset] Email not sent (no RESEND_API_KEY). Link for ${user.email}: ${resetUrl}`,
+    );
+  }
 
   return { success: confirmation };
 }
