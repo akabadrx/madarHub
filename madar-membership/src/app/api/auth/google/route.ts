@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
+import { portalUrl } from "@/lib/site";
 import {
   buildAuthorizationUrl,
   isGoogleConfigured,
@@ -19,7 +20,7 @@ function safeFrom(value: string | null): string {
 /** GET /membership/api/auth/google — starts the Google sign-in redirect. */
 export async function GET(request: Request) {
   if (!isGoogleConfigured()) {
-    return NextResponse.redirect(new URL("/membership/login?reason=google_failed", request.url));
+    return NextResponse.redirect(portalUrl("/login?reason=google_failed"));
   }
 
   const url = new URL(request.url);
