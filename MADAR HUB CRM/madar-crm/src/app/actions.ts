@@ -17,6 +17,7 @@ export async function saveLead(input: unknown) {
   const payload = {
     name: data.name || null,
     phone: data.phone,
+    email: data.email ? data.email.trim().toLowerCase() : null,
     source: data.source,
     interest: data.interest || null,
     suggestedPackageId: data.suggestedPackageId || null,

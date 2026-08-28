@@ -13,7 +13,7 @@ import { toDateTimeLocal } from "@/lib/utils";
 type FormValues = z.input<typeof leadSchema>;
 type PackageOption = { id: string; name: string; price: number };
 type InitialLead = {
-  id?: string; name?: string | null; phone?: string; source?: string; interest?: string | null;
+  id?: string; name?: string | null; phone?: string; email?: string | null; source?: string; interest?: string | null;
   suggestedPackageId?: string | null; status?: string; visitDate?: Date | string | null;
   followUpDate?: Date | string | null; paymentStatus?: string; amountPaid?: number; notes?: string | null;
 };
@@ -26,6 +26,7 @@ export function LeadForm({ packages, initial }: { packages: PackageOption[]; ini
       id: initial?.id,
       name: initial?.name || "",
       phone: initial?.phone || "",
+      email: initial?.email || "",
       source: (initial?.source || "Meta Ads") as FormValues["source"],
       interest: (initial?.interest || "Not Sure") as FormValues["interest"],
       suggestedPackageId: initial?.suggestedPackageId || "",
@@ -48,6 +49,7 @@ export function LeadForm({ packages, initial }: { packages: PackageOption[]; ini
       <div className="grid gap-5 md:grid-cols-2">
         <div><label className="label">Name <span className="font-normal text-slate-400">(recommended)</span></label><input aria-label="Name" className="field" placeholder="Lead name" {...register("name")} /></div>
         <div><label className="label">Phone *</label><input aria-label="Phone" className="field" placeholder="250 788 000 000" inputMode="tel" {...register("phone")} />{errors.phone && <p className="mt-1 text-xs text-red-600">{errors.phone.message}</p>}</div>
+        <div><label className="label">Email</label><input aria-label="Email" className="field" placeholder="member@example.com" inputMode="email" type="email" {...register("email")} />{errors.email && <p className="mt-1 text-xs text-red-600">{errors.email.message}</p>}</div>
         <div><label className="label">Lead source *</label><select aria-label="Lead source" className="field" {...register("source")}>{LEAD_SOURCES.map((item) => <option key={item}>{item}</option>)}</select></div>
         <div><label className="label">Need / interest</label><select aria-label="Need or interest" className="field" {...register("interest")}>{INTERESTS.map((item) => <option key={item}>{item}</option>)}</select></div>
         <div><label className="label">Suggested package</label><select aria-label="Suggested package" className="field" {...register("suggestedPackageId")}><option value="">No package selected</option>{packages.map((pkg) => <option key={pkg.id} value={pkg.id}>{pkg.name} - {pkg.price.toLocaleString()} RWF</option>)}</select></div>

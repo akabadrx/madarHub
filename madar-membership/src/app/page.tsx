@@ -4,7 +4,7 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { PackagePicker } from "@/components/package-picker";
 import { logout } from "@/app/auth-actions";
-import { linkAccountToLeadIfPossible } from "@/app/checkout-actions";
+import { linkAccountToLead } from "@/app/checkout-actions";
 import { getSessionUser } from "@/lib/session";
 import { getActivePackages, getCurrentPackage, getLead, getPayments } from "@/lib/crm";
 import { getMembershipPaymentStatus } from "@/lib/membership";
@@ -43,8 +43,7 @@ export default async function DashboardPage({
   // An account can be created before the member exists in the CRM, and a Google
   // sign-up carries no phone at all. Retry the match on each visit so a member
   // is connected as soon as their record or number appears.
-  const leadId =
-    user.leadId ?? (user.phone ? await linkAccountToLeadIfPossible(user.id, user.phone) : null);
+  const leadId = user.leadId ?? (await linkAccountToLead(user.id, user.email, user.phone));
 
   const params = await searchParams;
   const notice = params.payment ? PAYMENT_NOTICE[params.payment] : undefined;
@@ -178,8 +177,8 @@ export default async function DashboardPage({
             ) : (
               <div className="mp-due">
                 <p style={{ margin: "0 0 14px" }}>
-                  Add your phone number before paying online. Pesapal uses it to reach your mobile
-                  money account, and it is how we connect you to your Madar Hub membership.
+                  Add your phone number before paying online — Pesapal uses it to reach your mobile
+                  money account.
                 </p>
                 <a className="button primary" href="/membership/profile">
                   Add your phone number

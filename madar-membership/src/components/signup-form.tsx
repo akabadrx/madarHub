@@ -58,8 +58,8 @@ export function SignupForm() {
         />
       </div>
       <p className="mp-hint">
-        Use the number Madar Hub already has for you, so your membership and payments appear on your
-        account straight away.
+        Needed for mobile money at checkout, and to find your membership if we do not have your
+        email on file yet.
       </p>
 
       <div className="field">
