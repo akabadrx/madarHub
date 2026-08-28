@@ -7,6 +7,7 @@ export const leadSchema = z.object({
   id: z.string().optional(),
   name: z.string().trim().max(100).optional(),
   phone: z.string().trim().min(7, "Phone number is required"),
+  email: z.string().trim().email("Enter a valid email address").optional().or(z.literal("")),
   source: z.enum(LEAD_SOURCES),
   interest: z.enum(INTERESTS).optional().or(z.literal("")),
   suggestedPackageId: z.string().optional(),

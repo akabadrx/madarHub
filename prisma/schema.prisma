@@ -14,6 +14,10 @@ model Lead {
   id                  String    @id @default(cuid())
   name                String?
   phone               String
+  // Primary identifier for the member portal: an account is matched to this
+  // record by email first, falling back to phone for the members who predate
+  // email collection. Not unique — historic rows may share or lack one.
+  email               String?
   source              String
   interest            String?
   suggestedPackageId  String?
@@ -51,6 +55,7 @@ model Lead {
   @@index([status])
   @@index([followUpDate])
   @@index([phone])
+  @@index([email])
 }
 
 model Payment {
