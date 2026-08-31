@@ -55,6 +55,7 @@ model Lead {
   visits          Visit[]
   interactions    Interaction[]
   pesapalPayments PesapalPayment[]
+  momoPayments    MomoPayment[]
   portalInvites   PortalInvite[]
   reminderLogs    MemberReminderLog[]
 
@@ -109,6 +110,7 @@ model Package {
   leadsAsSuggested Lead[]
   payments         Payment[]
   pesapalPayments  PesapalPayment[]
+  momoPayments     MomoPayment[]
 }
 
 model Interaction {
@@ -160,6 +162,44 @@ model PesapalPayment {
 
   @@index([status])
   @@index([customerEmail])
+}
+
+// An MTN MoMo checkout. Kept separate from PesapalPayment rather than folded
+// into it with a `provider` column: the two providers key their transactions
+// differently (Pesapal by order tracking id, MoMo by the reference id we mint
+// ourselves) and the live Pesapal table should not be migrated under a running
+// checkout. Both feed the same Payment/Lead records once they complete.
+model MomoPayment {
+  id                String   @id @default(cuid())
+  merchantReference String   @unique
+  // The UUID sent to MTN as X-Reference-Id. The only handle for polling the
+  // transaction, so a row without one can never be resolved.
+  momoReferenceId   String?  @unique
+  packageId         String?
+  package           Package? @relation(fields: [packageId], references: [id])
+  packageName       String
+  // VAT-inclusive sale price, and what MoMo actually billed. Equal today —
+  // MoMo carries no surcharge — but kept as two columns so the CRM books the
+  // sale price regardless of what a future fee does to the charge.
+  amount            Int
+  chargedAmount     Int?
+  currency          String   @default("RWF")
+  customerName      String
+  customerEmail     String?
+  // The MSISDN the prompt was pushed to, in international digits.
+  customerPhone     String
+  status            String   @default("PENDING") // PENDING | COMPLETED | FAILED | ABANDONED
+  // "website" (public pricing page) or "membership" (signed-in portal member).
+  source            String   @default("website")
+  // MTN's rejection reason, kept so staff can tell a wrong PIN from no funds.
+  failureReason     String?
+  leadId            String?
+  lead              Lead?    @relation(fields: [leadId], references: [id])
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([status])
+  @@index([customerPhone])
 }
 
 // A one-time link staff send a member so they can create a portal account.

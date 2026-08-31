@@ -11,7 +11,7 @@ export const SITE_ORIGIN = process.env.NEXT_PUBLIC_SITE_ORIGIN ?? "";
  * `?v=` the static pages use, or the portal and the rest of the site can end up
  * on two different versions of the same CSS. Bump both together.
  */
-export const SITE_STYLES_VERSION = "20260828-2";
+export const SITE_STYLES_VERSION = "20260831-1";
 
 /** A URL on the marketing site, e.g. siteUrl("pricing.html"). */
 export function siteUrl(path: string): string {
@@ -20,6 +20,16 @@ export function siteUrl(path: string): string {
 
 export const WHATSAPP_NUMBER = "250783662543";
 export const WHATSAPP_URL = `https://wa.me/${WHATSAPP_NUMBER}`;
+
+/**
+ * The USSD front door to the same MTN merchant account the Collections API
+ * collects into. The API takes no merchant code — where the money lands is
+ * decided by the credentials — so this is only ever shown to a member as a way
+ * to pay by hand when the API could not complete the payment.
+ */
+export const MOMO_MERCHANT_CODE = "00743";
+export const MOMO_MERCHANT_NAME = "MADAR HUB LTD";
+export const MOMO_USSD = `*182*8*${MOMO_MERCHANT_CODE}#`;
 
 /**
  * Absolute URL for a page in this portal.

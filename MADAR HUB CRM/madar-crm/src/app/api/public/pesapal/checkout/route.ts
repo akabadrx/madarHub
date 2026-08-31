@@ -4,6 +4,7 @@ import { z } from "zod";
 import { getDb } from "@/lib/db";
 import { submitOrderRequest } from "@/lib/pesapal";
 import { checkoutAmounts } from "@/lib/pricing";
+import { corsHeaders } from "@/lib/public-cors";
 
 /**
  * POST /crm/api/public/pesapal/checkout
@@ -19,29 +20,6 @@ const bodySchema = z.object({
   customerEmail: z.string().trim().email(),
   customerPhone: z.string().trim().min(7).max(20),
 });
-
-/**
- * The pricing page is also reachable on www.madarorbit.com, which 301s to the
- * canonical host. A browser treats that as a cross-origin redirect and aborts the
- * checkout request ("Failed to fetch") unless we return CORS headers, so the
- * marketing-site origins are allowed explicitly.
- */
-const ALLOWED_ORIGINS = new Set([
-  "https://madarorbit.com",
-  "https://www.madarorbit.com",
-]);
-
-function corsHeaders(req: Request): Record<string, string> {
-  const origin = req.headers.get("origin");
-  if (!origin || !ALLOWED_ORIGINS.has(origin)) return {};
-  return {
-    "Access-Control-Allow-Origin": origin,
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
-    "Access-Control-Max-Age": "86400",
-    Vary: "Origin",
-  };
-}
 
 export async function OPTIONS(req: Request) {
   return new NextResponse(null, { status: 204, headers: corsHeaders(req) });

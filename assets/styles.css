@@ -3092,11 +3092,11 @@ button, input, select, textarea {
   box-shadow: 0 8px 24px rgba(214, 168, 79, 0.4);
 }
 
-body.pesapal-modal-open {
+body.checkout-modal-open {
   overflow: hidden;
 }
 
-.pesapal-overlay {
+.checkout-overlay {
   position: fixed;
   inset: 0;
   z-index: 1000;
@@ -3107,11 +3107,11 @@ body.pesapal-modal-open {
   background: rgba(7, 26, 45, 0.6);
 }
 
-.pesapal-overlay[hidden] {
+.checkout-overlay[hidden] {
   display: none;
 }
 
-.pesapal-modal {
+.checkout-modal {
   position: relative;
   width: 100%;
   max-width: 420px;
@@ -3123,26 +3123,26 @@ body.pesapal-modal-open {
   padding: clamp(24px, 4vw, 32px);
 }
 
-.pesapal-modal h3 {
+.checkout-modal h3 {
   color: var(--navy);
   margin-bottom: 8px;
 }
 
-.pesapal-package-line {
+.checkout-package-line {
   color: var(--muted);
   margin-bottom: 20px;
 }
 
-.pesapal-package-line strong {
+.checkout-package-line strong {
   color: var(--navy);
 }
 
-.pesapal-modal form {
+.checkout-modal form {
   display: grid;
   gap: 16px;
 }
 
-.pesapal-close {
+.checkout-close {
   position: absolute;
   top: 16px;
   right: 16px;
@@ -3160,23 +3160,191 @@ body.pesapal-modal-open {
   cursor: pointer;
 }
 
-.pesapal-close:hover,
-.pesapal-close:focus-visible {
+.checkout-close:hover,
+.checkout-close:focus-visible {
   background: rgba(214, 168, 79, 0.18);
   outline: none;
 }
 
-.pesapal-error {
+.checkout-error {
   color: #B3261E;
   font-size: 0.88rem;
   margin: 0;
 }
 
-.pesapal-note {
+.checkout-note {
   color: var(--muted);
   font-size: 0.8rem;
   margin: 0;
   text-align: center;
+}
+
+/* ---------- Checkout: payment method chooser ---------- */
+
+.checkout-methods {
+  border: none;
+  margin: 0 0 20px;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.checkout-methods legend {
+  color: var(--navy);
+  font-size: 0.88rem;
+  font-weight: 600;
+  margin-bottom: 10px;
+  padding: 0;
+}
+
+.checkout-method {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border, rgba(7, 26, 45, 0.14));
+  border-radius: var(--radius-md, 10px);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.checkout-method:hover {
+  border-color: var(--gold);
+}
+
+/* The selected card is outlined rather than filled, so the amounts on both
+   rows stay equally readable while the choice is still obvious. */
+.checkout-method:has(input:checked) {
+  border-color: var(--navy);
+  background: var(--off-white);
+  box-shadow: inset 0 0 0 1px var(--navy);
+}
+
+.checkout-method:focus-within {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+.checkout-method input {
+  margin: 0;
+  accent-color: var(--navy);
+}
+
+.checkout-method-body {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.checkout-method-title {
+  color: var(--navy);
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.checkout-method-tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(214, 168, 79, 0.22);
+  color: var(--navy);
+  font-size: 0.7rem;
+  font-weight: 600;
+  vertical-align: middle;
+}
+
+.checkout-method-desc {
+  color: var(--muted);
+  font-size: 0.79rem;
+  line-height: 1.35;
+}
+
+.checkout-method-amount {
+  color: var(--navy);
+  font-size: 0.9rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* On a narrow phone the amount column squeezes the method name into three
+   lines. Drop the amount onto its own row so the name reads in one go — this
+   is the screen most MoMo customers will be paying from. */
+@media (max-width: 420px) {
+  .checkout-method {
+    grid-template-columns: auto 1fr;
+    row-gap: 6px;
+  }
+
+  .checkout-method-amount {
+    grid-column: 2;
+    text-align: left;
+  }
+}
+
+/* ---------- Checkout: MoMo waiting state ---------- */
+
+.checkout-spinner {
+  width: 44px;
+  height: 44px;
+  margin: 8px auto 20px;
+  border: 3px solid rgba(7, 26, 45, 0.12);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: checkout-spin 0.9s linear infinite;
+}
+
+@keyframes checkout-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .checkout-spinner {
+    animation-duration: 2.4s;
+  }
+}
+
+.checkout-waiting-title {
+  color: var(--navy);
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.checkout-waiting-body {
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.5;
+  margin: 0 0 16px;
+  text-align: center;
+}
+
+.checkout-waiting-body strong {
+  color: var(--navy);
+}
+
+.checkout-waiting-status {
+  color: var(--navy);
+  font-size: 0.88rem;
+  font-weight: 600;
+  margin: 0 0 14px;
+  text-align: center;
+}
+
+.checkout-waiting-status.error {
+  color: #b3261e;
+}
+
+/* The manual USSD fallback sits inside the error paragraph but is guidance,
+   not part of the failure — give it its own, calmer line. */
+.checkout-manual-momo {
+  display: block;
+  margin-top: 8px;
+  color: var(--navy);
+  font-size: 0.84rem;
+  line-height: 1.45;
 }
 /* ---------- Motion & premium polish ---------- */
 

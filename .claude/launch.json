@@ -6,6 +6,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["--prefix", "madar-membership", "run", "dev"],
       "port": 3201
+    },
+    {
+      "name": "site",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "3200"],
+      "port": 3200
     }
   ]
 }

@@ -82,6 +82,119 @@ export async function startCheckout(_prev: CheckoutState, formData: FormData): P
   redirect(redirectUrl);
 }
 
+export type MomoStartResult =
+  | { error: string }
+  | { reference: string; phone: string; amount: number; packageName: string };
+
+/**
+ * Starts an MTN MoMo checkout for the signed-in member.
+ *
+ * Unlike Pesapal there is nowhere to send the member: MoMo pushes a PIN prompt
+ * to their handset and this returns a reference the page then polls with
+ * `checkMomoStatus`. As with the Pesapal action, identity comes from the
+ * session and the CRM record, never from the form.
+ */
+export async function startMomoCheckout(packageSlug: string): Promise<MomoStartResult> {
+  const user = await getSessionUser();
+  if (!user) redirect("/login");
+
+  const slug = packageSlug.trim();
+  if (!slug) return { error: "Choose a package first." };
+
+  const pkg = await getPackageBySlug(slug);
+  if (!pkg) return { error: "That package is not available for online payment right now." };
+
+  const lead = user.leadId ? await getLead(user.leadId) : null;
+
+  // The prompt is pushed to this number, so a member with none on file — or
+  // with one MTN cannot resolve — cannot start a MoMo payment.
+  const phone = normalizePhone(user.phone || lead?.phone || "");
+  if (!/^250\d{9}$/.test(phone)) {
+    return {
+      error:
+        "Add your MTN number under Your details before paying with MoMo, or book on WhatsApp.",
+    };
+  }
+
+  const secret = process.env.INTERNAL_API_SECRET;
+  const crmBaseUrl = process.env.CRM_BASE_URL || "https://madarorbit.com/crm";
+  if (!secret) {
+    console.error("[momo-checkout] INTERNAL_API_SECRET is not configured");
+    return { error: "Online payment is not set up yet. Please book on WhatsApp." };
+  }
+
+  try {
+    const response = await fetch(`${crmBaseUrl}/api/internal/momo/checkout`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${secret}` },
+      body: JSON.stringify({
+        packageSlug: slug,
+        customerName: lead?.name || user.fullName,
+        customerEmail: user.email,
+        customerPhone: phone,
+        leadId: user.leadId,
+      }),
+      cache: "no-store",
+    });
+
+    const data = (await response.json().catch(() => ({}))) as {
+      reference?: string;
+      chargedAmount?: number;
+      error?: string;
+    };
+
+    if (!response.ok || !data.reference) {
+      console.error(`[momo-checkout] CRM returned ${response.status}: ${data.error ?? "no reference"}`);
+      return { error: data.error || "Something went wrong starting your payment. Please try again." };
+    }
+
+    return {
+      reference: data.reference,
+      phone,
+      amount: data.chargedAmount ?? 0,
+      packageName: pkg.name,
+    };
+  } catch (error) {
+    console.error("[momo-checkout]", error instanceof Error ? error.message : error);
+    return { error: "Could not reach the payment service. Please try again in a moment." };
+  }
+}
+
+export type MomoStatusResult = {
+  status: "PENDING" | "COMPLETED" | "FAILED" | "ABANDONED";
+  reason?: string | null;
+};
+
+/**
+ * Polled by the package picker while the member answers the prompt.
+ *
+ * Anything that is not a definite outcome reports PENDING: a wobble reaching
+ * the CRM must not tell a member their payment failed while their handset is
+ * still holding the prompt.
+ */
+export async function checkMomoStatus(reference: string): Promise<MomoStatusResult> {
+  const user = await getSessionUser();
+  if (!user) redirect("/login");
+
+  const secret = process.env.INTERNAL_API_SECRET;
+  const crmBaseUrl = process.env.CRM_BASE_URL || "https://madarorbit.com/crm";
+  if (!secret) return { status: "PENDING" };
+
+  try {
+    const response = await fetch(
+      `${crmBaseUrl}/api/internal/momo/status?ref=${encodeURIComponent(reference)}`,
+      { headers: { Authorization: `Bearer ${secret}` }, cache: "no-store" },
+    );
+    if (!response.ok) return { status: "PENDING" };
+
+    const data = (await response.json().catch(() => ({}))) as MomoStatusResult;
+    return { status: data.status ?? "PENDING", reason: data.reason ?? null };
+  } catch (error) {
+    console.error("[momo-status]", error instanceof Error ? error.message : error);
+    return { status: "PENDING" };
+  }
+}
+
 /**
  * Connects a member account to its CRM Lead.
  *
