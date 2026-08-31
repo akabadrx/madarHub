@@ -82,6 +82,33 @@ export async function startCheckout(_prev: CheckoutState, formData: FormData): P
   redirect(redirectUrl);
 }
 
+/**
+ * Whether the portal should offer MoMo at all.
+ *
+ * The CRM owns the MoMo credentials, so it is the only thing that can answer
+ * this — and it answers false while they are missing or still pointed at MTN's
+ * sandbox. Asking means going live is a matter of swapping the CRM's env vars,
+ * with no portal redeploy.
+ */
+export async function isMomoAvailable(): Promise<boolean> {
+  const crmBaseUrl = process.env.CRM_BASE_URL || "https://madarorbit.com/crm";
+  try {
+    const response = await fetch(`${crmBaseUrl}/api/public/momo/availability`, {
+      // Short-lived cache: the dashboard is rendered per request, and this must
+      // not become one CRM round-trip per page view.
+      next: { revalidate: 60 },
+    });
+    if (!response.ok) return false;
+    const data = (await response.json().catch(() => ({}))) as { available?: boolean };
+    return data.available === true;
+  } catch (error) {
+    // Unreachable is treated as unavailable: showing a payment method we
+    // cannot confirm works is worse than showing one fewer.
+    console.error("[momo-availability]", error instanceof Error ? error.message : error);
+    return false;
+  }
+}
+
 export type MomoStartResult =
   | { error: string }
   | { reference: string; phone: string; amount: number; packageName: string };
