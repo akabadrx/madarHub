@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { randomBytes } from "crypto";
 import { z } from "zod";
 import { getDb } from "@/lib/db";
-import { requestToPay } from "@/lib/momo";
+import { isMomoLive, requestToPay } from "@/lib/momo";
 import { momoCheckoutAmounts } from "@/lib/pricing";
 import { normalizePhone } from "@/lib/utils";
 
@@ -35,6 +35,16 @@ export async function POST(req: Request) {
   }
   if (req.headers.get("authorization") !== `Bearer ${secret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // The portal hides the button when MoMo is not live, but a stale page must
+  // not reach MTN either — a sandbox checkout would take a real member through
+  // a payment that moves no money.
+  if (!isMomoLive()) {
+    return NextResponse.json(
+      { error: "MoMo payment is not available right now. Please pay by card or book on WhatsApp." },
+      { status: 503 },
+    );
   }
 
   try {

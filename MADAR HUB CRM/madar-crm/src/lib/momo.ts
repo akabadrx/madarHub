@@ -74,7 +74,7 @@ export function getMomoConfig(): MomoConfig {
     }
 }
 
-/** True when every MoMo variable is present, so a caller can offer or hide the option. */
+/** True when every MoMo variable is present. */
 export function isMomoConfigured(): boolean {
     try {
         getMomoConfig()
@@ -82,6 +82,25 @@ export function isMomoConfigured(): boolean {
     } catch {
         return false
     }
+}
+
+/**
+ * Whether MoMo may be offered to a paying customer.
+ *
+ * Being configured is not enough. Sandbox credentials answer requests happily
+ * but move no money, so a checkout pointed at the sandbox would take a real
+ * customer through a payment that silently does nothing. The option therefore
+ * stays hidden until the target environment is a live one — the public site
+ * and the portal both ask this before showing the button, so going live is a
+ * matter of swapping the env vars and restarting, with no redeploy.
+ *
+ * Set MOMO_ALLOW_SANDBOX_CHECKOUT=true to exercise the whole flow against the
+ * sandbox before production credentials arrive.
+ */
+export function isMomoLive(): boolean {
+    if (!isMomoConfigured()) return false
+    if (process.env.MOMO_TARGET_ENVIRONMENT !== "sandbox") return true
+    return process.env.MOMO_ALLOW_SANDBOX_CHECKOUT === "true"
 }
 
 // ─── In-memory token cache ───────────────────────────────────────────────────

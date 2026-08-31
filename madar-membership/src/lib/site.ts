@@ -11,7 +11,7 @@ export const SITE_ORIGIN = process.env.NEXT_PUBLIC_SITE_ORIGIN ?? "";
  * `?v=` the static pages use, or the portal and the rest of the site can end up
  * on two different versions of the same CSS. Bump both together.
  */
-export const SITE_STYLES_VERSION = "20260831-1";
+export const SITE_STYLES_VERSION = "20260831-2";
 
 /** A URL on the marketing site, e.g. siteUrl("pricing.html"). */
 export function siteUrl(path: string): string {

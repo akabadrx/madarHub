@@ -5,6 +5,7 @@
   const PESAPAL_PATH = "/crm/api/public/pesapal/checkout";
   const MOMO_PATH = "/crm/api/public/momo/checkout";
   const MOMO_STATUS_PATH = "/crm/api/public/momo/status";
+  const MOMO_AVAILABILITY_PATH = "/crm/api/public/momo/availability";
   const CANONICAL_ORIGIN = "https://madarorbit.com";
   const WHATSAPP_URL = "https://wa.me/250783662543";
   const REQUEST_TIMEOUT_MS = 45000;
@@ -131,8 +132,46 @@
   let pollTimer = null;
   let activeMomoAmount = 0;
 
+  // MoMo stays hidden until the server confirms it is live, so the option is
+  // never offered while the credentials are missing or still pointed at MTN's
+  // sandbox. Until the answer arrives the page behaves exactly as it did
+  // before MoMo existed: Pesapal only. Asked once on load rather than on first
+  // open, so the chooser is settled before anyone sees it.
+  let momoAvailable = false;
+  let availabilityChecked = false;
+
+  const methodsFieldset = overlay.querySelector(".checkout-methods");
+  const momoRadio = overlay.querySelector('input[name="method"][value="momo"]');
+  const pesapalRadio = overlay.querySelector('input[name="method"][value="pesapal"]');
+
   const selectedMethod = () =>
-    overlay.querySelector('input[name="method"]:checked')?.value || "momo";
+    overlay.querySelector('input[name="method"]:checked')?.value || "pesapal";
+
+  function applyAvailability() {
+    methodsFieldset.hidden = !momoAvailable;
+    if (!momoAvailable) {
+      pesapalRadio.checked = true;
+      momoRadio.disabled = true;
+    } else {
+      momoRadio.disabled = false;
+    }
+    applyMethod();
+  }
+
+  async function ensureAvailabilityChecked() {
+    if (availabilityChecked) return;
+    availabilityChecked = true;
+    try {
+      const res = await fetch(apiUrl(MOMO_AVAILABILITY_PATH), { headers: { Accept: "application/json" } });
+      const data = await res.json().catch(() => ({}));
+      momoAvailable = res.ok && data.available === true;
+    } catch {
+      // Unreachable is treated as unavailable: offering a method we cannot
+      // confirm works is worse than showing one fewer.
+      momoAvailable = false;
+    }
+    applyAvailability();
+  }
 
   /**
    * MoMo needs a phone number and nothing else; Pesapal needs an email for its
@@ -174,7 +213,8 @@
     errorEl.hidden = true;
     errorEl.textContent = "";
     form.reset();
-    applyMethod();
+    applyAvailability();
+    ensureAvailabilityChecked();
     showStep("form");
 
     lastFocused = document.activeElement;
@@ -399,4 +439,7 @@
     link.textContent = "Or book on WhatsApp.";
     errorEl.appendChild(link);
   }
+
+  applyAvailability();
+  ensureAvailabilityChecked();
 })();

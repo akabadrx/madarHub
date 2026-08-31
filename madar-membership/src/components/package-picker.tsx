@@ -57,9 +57,12 @@ type MomoState =
 export function PackagePicker({
   packages,
   currentSlug,
+  momoAvailable = false,
 }: {
   packages: PickerPackage[];
   currentSlug?: string | null;
+  /** False while the CRM's MoMo credentials are missing or still on sandbox. */
+  momoAvailable?: boolean;
 }) {
   const router = useRouter();
   const [state, formAction, pending] = useActionState(startCheckout, initialState);
@@ -225,19 +228,22 @@ export function PackagePicker({
 
               <div className="pricing-card-footer">
                 {/* MoMo leads because it is the cheaper channel for the member
-                    and the one most of them already use. */}
-                <button
-                  type="button"
-                  className="button pesapal"
-                  disabled={busyAnywhere}
-                  onClick={() => onMomoClick(pkg.slug)}
-                >
-                  {busy && momoStarting
-                    ? "Sending prompt…"
-                    : isCurrent
-                      ? "Renew with MoMo"
-                      : "Pay with MoMo"}
-                </button>
+                    and the one most of them already use — but only once the
+                    CRM confirms it can actually take money. */}
+                {momoAvailable ? (
+                  <button
+                    type="button"
+                    className="button pesapal"
+                    disabled={busyAnywhere}
+                    onClick={() => onMomoClick(pkg.slug)}
+                  >
+                    {busy && momoStarting
+                      ? "Sending prompt…"
+                      : isCurrent
+                        ? "Renew with MoMo"
+                        : "Pay with MoMo"}
+                  </button>
+                ) : null}
 
                 {/* One form per card: the member supplies only the package, and
                     their identity comes from the session on the server. */}
@@ -245,11 +251,17 @@ export function PackagePicker({
                   <input type="hidden" name="packageSlug" value={pkg.slug} />
                   <button
                     type="submit"
-                    className="button outline"
+                    className={momoAvailable ? "button outline" : "button pesapal"}
                     disabled={busyAnywhere}
                     onClick={() => setSubmitting(pkg.slug)}
                   >
-                    {busy && pending ? "Opening payment…" : "Pay by card"}
+                    {busy && pending
+                      ? "Opening payment…"
+                      : momoAvailable
+                        ? "Pay by card"
+                        : isCurrent
+                          ? "Renew Online"
+                          : "Pay Online"}
                   </button>
                 </form>
 
@@ -259,8 +271,14 @@ export function PackagePicker({
               </div>
 
               <p className="mp-plan-total">
-                {formatRwf(momoCheckoutAmounts(pkg.price).chargedAmount)} on MoMo &middot;{" "}
-                {formatRwf(checkoutAmounts(pkg.price).chargedAmount)} by card
+                {momoAvailable ? (
+                  <>
+                    {formatRwf(momoCheckoutAmounts(pkg.price).chargedAmount)} on MoMo &middot;{" "}
+                    {formatRwf(checkoutAmounts(pkg.price).chargedAmount)} by card
+                  </>
+                ) : (
+                  <>{formatRwf(checkoutAmounts(pkg.price).chargedAmount)} charged at checkout</>
+                )}
               </p>
             </article>
           );
@@ -268,9 +286,20 @@ export function PackagePicker({
       </div>
 
       <p className="mp-hint" style={{ marginTop: 18 }}>
-        Both prices include 18% VAT. Paying with MTN MoMo costs nothing extra &mdash; you approve a
-        prompt on your phone. Paying by card, bank or another mobile money network goes through
-        Pesapal, which adds a 3% online payment fee; we never see your card details either way.
+        {momoAvailable ? (
+          <>
+            Both prices include 18% VAT. Paying with MTN MoMo costs nothing extra &mdash; you
+            approve a prompt on your phone. Paying by card, bank or another mobile money network
+            goes through Pesapal, which adds a 3% online payment fee; we never see your card
+            details either way.
+          </>
+        ) : (
+          <>
+            The amount charged includes 18% VAT and Pesapal&rsquo;s 3% online payment fee. You pay
+            securely on Pesapal &mdash; we never see your card or mobile money details, and your
+            saved details are filled in for you.
+          </>
+        )}
       </p>
 
       {momo.phase !== "idle" ? (

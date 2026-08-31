@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { PackagePicker } from "@/components/package-picker";
+import { isMomoAvailable } from "@/app/checkout-actions";
 import { logout } from "@/app/auth-actions";
 import { linkAccountToLead } from "@/app/checkout-actions";
 import { getSessionUser } from "@/lib/session";
@@ -66,6 +67,7 @@ export default async function DashboardPage({
     : null;
 
   const currentSlug = packages.find((p) => p.name === currentPackage?.name)?.slug ?? null;
+  const momoAvailable = await isMomoAvailable();
   const paymentDue = membership?.status === "Delayed Payment" || membership?.status === "Suspended";
   const firstName = user.fullName.split(" ")[0] || "there";
   const status = membership?.status ?? "No active plan";
@@ -174,7 +176,11 @@ export default async function DashboardPage({
             ) : null}
 
             {user.phone ? (
-              <PackagePicker packages={packages} currentSlug={currentSlug} />
+              <PackagePicker
+                packages={packages}
+                currentSlug={currentSlug}
+                momoAvailable={momoAvailable}
+              />
             ) : (
               <div className="mp-due">
                 <p>
