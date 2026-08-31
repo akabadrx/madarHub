@@ -1,6 +1,6 @@
 import { getDb } from "@/lib/db";
 import { getTransactionStatus } from "@/lib/pesapal";
-import { normalizePhone } from "@/lib/utils";
+import { recordOnlinePayment } from "@/lib/online-fulfillment";
 
 /**
  * Checks a Pesapal order's real status and, the first time it is seen as
@@ -22,69 +22,22 @@ export async function fulfillPesapalPayment(merchantReference: string, orderTrac
       const payment = await tx.pesapalPayment.findUnique({ where: { merchantReference } });
       if (!payment || payment.status === "COMPLETED" || payment.status === "FAILED") return payment;
 
-      // A membership-portal order already carries the Lead of the signed-in
-      // member, so there is nothing to guess. Only a public website order has
-      // to be matched back to a person by phone number.
-      let lead = payment.leadId
-        ? await tx.lead.findUnique({ where: { id: payment.leadId } })
-        : null;
-
-      const phone = payment.customerPhone ? normalizePhone(payment.customerPhone) : null;
-      if (!lead && phone) {
-        lead = await tx.lead.findFirst({ where: { phone } });
-      }
-
-      if (!lead) {
-        // The status has to follow what was actually bought. Booking every
-        // online payer as a day pass told a member who paid for a monthly
-        // package that they were on a day pass.
-        const pkg = payment.packageId
-          ? await tx.package.findUnique({ where: { id: payment.packageId } })
-          : null;
-        const status = pkg?.billingType === "monthly" ? "Paid Monthly" : "Paid Day Pass";
-
-        lead = await tx.lead.create({
-          data: {
-            name: payment.customerName,
-            phone: phone || `pesapal-${payment.id}`,
-            source: "Website",
-            interest: payment.packageName,
-            suggestedPackageId: payment.packageId,
-            status,
-            paymentStatus: "Paid",
-            amountPaid: payment.amount,
-            notes: `Created from an online Pesapal payment for ${payment.packageName}.`,
-          },
-        });
-      }
-
-      await tx.payment.create({
-        data: {
-          leadId: lead.id,
-          packageId: payment.packageId,
-          amount: payment.amount,
-          paymentMethod: "Pesapal",
-          notes: `Online payment. Pesapal ref ${payment.merchantReference}.`,
-        },
-      });
-
-      const aggregate = await tx.payment.aggregate({ where: { leadId: lead.id }, _sum: { amount: true } });
-      await tx.lead.update({
-        where: { id: lead.id },
-        data: { amountPaid: aggregate._sum.amount || payment.amount, paymentStatus: "Paid" },
-      });
-
-      await tx.interaction.create({
-        data: {
-          leadId: lead.id,
-          type: "payment",
-          content: `Paid ${payment.amount.toLocaleString()} RWF for ${payment.packageName} via Pesapal (online checkout)`,
-        },
+      const leadId = await recordOnlinePayment(tx, {
+        leadId: payment.leadId,
+        customerName: payment.customerName,
+        customerPhone: payment.customerPhone,
+        packageId: payment.packageId,
+        packageName: payment.packageName,
+        amount: payment.amount,
+        paymentMethod: "Pesapal",
+        providerLabel: "Pesapal",
+        reference: payment.merchantReference,
+        placeholderPhoneSeed: `pesapal-${payment.id}`,
       });
 
       return tx.pesapalPayment.update({
         where: { merchantReference },
-        data: { status: "COMPLETED", pesapalTrackingId: orderTrackingId, leadId: lead.id },
+        data: { status: "COMPLETED", pesapalTrackingId: orderTrackingId, leadId },
       });
     });
   }

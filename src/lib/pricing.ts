@@ -32,3 +32,14 @@ export function checkoutAmounts(packagePrice: number) {
   const amount = saleAmountWithVat(packagePrice);
   return { amount, chargedAmount: addPesapalFee(amount) };
 }
+
+/**
+ * MoMo bills the customer directly, so there is no Pesapal 3% to pass on: the
+ * charged amount is the VAT-inclusive sale price itself. The pair is still
+ * returned so both channels have the same shape and the same `amount` books to
+ * the CRM either way.
+ */
+export function momoCheckoutAmounts(packagePrice: number) {
+  const amount = saleAmountWithVat(packagePrice);
+  return { amount, chargedAmount: amount };
+}
