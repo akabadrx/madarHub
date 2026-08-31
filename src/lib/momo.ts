@@ -94,8 +94,13 @@ export function isMomoConfigured(): boolean {
  * and the portal both ask this before showing the button, so going live is a
  * matter of swapping the env vars and restarting, with no redeploy.
  *
- * Set MOMO_ALLOW_SANDBOX_CHECKOUT=true to exercise the whole flow against the
- * sandbox before production credentials arrive.
+ * MOMO_ALLOW_SANDBOX_CHECKOUT=true opens the flow against the sandbox, but ONLY
+ * ever against a throwaway database. MTN's sandbox reports most numbers as
+ * SUCCESSFUL without any money moving, so fulfilment would book real Payment
+ * rows against real Leads for payments that never happened — and it would do it
+ * for any customer who happened to be on the pricing page at the time. Never
+ * set it on the production deployment; test a live MoMo payment with production
+ * credentials and a small real amount instead.
  */
 export function isMomoLive(): boolean {
     if (!isMomoConfigured()) return false
