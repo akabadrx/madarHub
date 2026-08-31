@@ -158,7 +158,7 @@ export default async function DashboardPage({
           <section className="mp-section">
             <div className="mp-section-head">
               <h2>{paymentDue ? "Renew your membership" : "Pay for a package"}</h2>
-              <p className="mp-section-note">Secure payment through Pesapal</p>
+              <p className="mp-section-note">MTN MoMo or card, paid securely</p>
             </div>
 
             {paymentDue && membership ? (
@@ -178,8 +178,8 @@ export default async function DashboardPage({
             ) : (
               <div className="mp-due">
                 <p>
-                  Add your phone number before paying online — Pesapal uses it to reach your mobile
-                  money account.
+                  Add your phone number before paying online — MoMo sends the payment prompt to
+                  it, and Pesapal uses it to reach your mobile money account.
                 </p>
                 <a className="button primary" href="/membership/profile">
                   Add your phone number

@@ -24,3 +24,12 @@ export function checkoutAmounts(packagePrice: number) {
   const amount = saleAmountWithVat(packagePrice);
   return { amount, chargedAmount: addPesapalFee(amount) };
 }
+
+/**
+ * MoMo bills the member directly, so there is no Pesapal 3% to pass on: the
+ * charged amount is the VAT-inclusive sale price itself.
+ */
+export function momoCheckoutAmounts(packagePrice: number) {
+  const amount = saleAmountWithVat(packagePrice);
+  return { amount, chargedAmount: amount };
+}
