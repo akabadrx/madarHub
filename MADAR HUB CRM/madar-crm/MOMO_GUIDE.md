@@ -81,16 +81,40 @@ production MTN issues these to you directly and this endpoint does not exist.
 
 ## 4. Test in the sandbox
 
-MTN's sandbox resolves the outcome from the payer's number rather than a real
+> **Never do this against the production database.** MTN's sandbox reports most
+> numbers as `SUCCESSFUL` without any money moving, so fulfilment would book
+> real Payment rows against real Leads for payments that never happened — and
+> the option would be visible to any customer on the pricing page while the flag
+> was set. Use a throwaway database, or skip to step 5 and make your first live
+> test a small real payment with production credentials.
+
+MoMo stays hidden from customers until `isMomoLive()` returns true, which needs
+a non-sandbox `MOMO_TARGET_ENVIRONMENT`. On a throwaway database you can
+override that with:
+
+```env
+MOMO_ALLOW_SANDBOX_CHECKOUT="true"
+```
+
+The sandbox resolves the outcome from the payer's number rather than a real
 handset, so no phone is involved:
 
 - any normal-looking MSISDN (e.g. `250788123456`) → `SUCCESSFUL`
 - the reserved failure numbers documented in the MoMo Collections sandbox docs →
   `FAILED` with the matching reason
 
-Walk the whole flow from madarorbit.com/pricing.html: pick a package, choose
-MTN MoMo, submit, and watch the "Check your phone" screen resolve. Then confirm
-in the CRM that a Lead and a Payment (method `MoMo Pay`) were created.
+Walk the whole flow from the pricing page: pick a package, choose MTN MoMo,
+submit, and watch the "Check your phone" screen resolve. Then confirm a Lead and
+a Payment (method `MoMo Pay`) were created.
+
+To check the credentials alone without any checkout, ask MTN for a token
+directly — this touches nothing in the CRM:
+
+```bash
+MOMO_BASIC=$(printf '%s:%s' "$MOMO_API_USER" "$MOMO_API_KEY" | base64 -w0); curl -s -o /dev/null -w "%{http_code}\n" -X POST -H "Authorization: Basic $MOMO_BASIC" -H "Ocp-Apim-Subscription-Key: $MOMO_SUBSCRIPTION_KEY" -H "Content-Length: 0" "$MOMO_BASE_URL/collection/token/"
+```
+
+`200` means the credentials are good.
 
 ## 5. Go live
 
