@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { randomBytes } from "crypto";
 import { z } from "zod";
 import { getDb } from "@/lib/db";
-import { requestToPay } from "@/lib/momo";
+import { isMomoLive, requestToPay } from "@/lib/momo";
 import { momoCheckoutAmounts } from "@/lib/pricing";
 import { corsHeaders } from "@/lib/public-cors";
 import { normalizePhone } from "@/lib/utils";
@@ -31,6 +31,17 @@ export async function OPTIONS(req: Request) {
 
 export async function POST(req: Request) {
   const cors = corsHeaders(req);
+
+  // The page hides the option when MoMo is not live, but a stale tab or a
+  // direct post must not reach MTN either — a sandbox checkout would take a
+  // real customer through a payment that moves no money.
+  if (!isMomoLive()) {
+    return NextResponse.json(
+      { error: "MoMo payment is not available right now. Please pay by card or book via WhatsApp." },
+      { status: 503, headers: cors },
+    );
+  }
+
   try {
     const parsed = bodySchema.safeParse(await req.json());
     if (!parsed.success) {
