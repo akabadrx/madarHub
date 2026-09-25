@@ -4,6 +4,18 @@
 
 export const PAYMENT_GRACE_PERIOD_DAYS = 7;
 
+/** Months one payment covers, keyed by Package.billingType. Unlisted types are one-offs. */
+const BILLING_PERIOD_MONTHS: Record<string, number> = {
+  monthly: 1,
+  "6-months": 6,
+  "12-months": 12,
+};
+
+/** Months one payment covers, or null for a one-off billing type. */
+export function billingPeriodMonths(billingType: string): number | null {
+  return BILLING_PERIOD_MONTHS[billingType] ?? null;
+}
+
 export type MembershipPaymentStatus = "Active" | "Delayed Payment" | "Suspended";
 
 export type MembershipPaymentInfo = {
@@ -26,9 +38,10 @@ function addDays(date: Date, days: number) {
 }
 
 /**
- * A member with no package assigned is still treated as monthly, using what
- * they last paid as the recurring amount — the CRM does the same. Only an
- * explicitly non-monthly package, or no payment history, opts them out.
+ * The next payment falls one billing period (1, 6 or 12 months) after the last
+ * one. A member with no package assigned is still treated as monthly, using
+ * what they last paid as the recurring amount — the CRM does the same. Only a
+ * one-off package, or no payment history, opts them out.
  */
 export function getMembershipPaymentStatus(
   pkg: { billingType: string; price: number } | null | undefined,
@@ -36,10 +49,12 @@ export function getMembershipPaymentStatus(
   lastPaymentAmount: number = 0,
   now: Date = new Date(),
 ): MembershipPaymentInfo | null {
-  if (!lastPaymentDate || (pkg && pkg.billingType !== "monthly")) return null;
-  const monthlyAmount = pkg?.price ?? lastPaymentAmount;
+  if (!lastPaymentDate) return null;
+  const periodMonths = pkg ? billingPeriodMonths(pkg.billingType) : 1;
+  if (!periodMonths) return null;
+  const renewalAmount = pkg?.price ?? lastPaymentAmount;
 
-  const nextPaymentDate = addMonths(lastPaymentDate, 1);
+  const nextPaymentDate = addMonths(lastPaymentDate, periodMonths);
   const suspensionDate = addDays(nextPaymentDate, PAYMENT_GRACE_PERIOD_DAYS);
 
   if (now <= nextPaymentDate) {
@@ -50,7 +65,7 @@ export function getMembershipPaymentStatus(
       0,
       Math.ceil((suspensionDate.getTime() - now.getTime()) / 86_400_000),
     );
-    return { status: "Delayed Payment", nextPaymentDate, dueAmount: monthlyAmount, daysUntilSuspension };
+    return { status: "Delayed Payment", nextPaymentDate, dueAmount: renewalAmount, daysUntilSuspension };
   }
-  return { status: "Suspended", nextPaymentDate, dueAmount: monthlyAmount, daysUntilSuspension: 0 };
+  return { status: "Suspended", nextPaymentDate, dueAmount: renewalAmount, daysUntilSuspension: 0 };
 }

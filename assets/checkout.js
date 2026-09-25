@@ -129,6 +129,7 @@
 
   let lastFocused = null;
   let activeSlug = null;
+  let activeVatInclusive = false;
   let pollTimer = null;
   let activeMomoAmount = 0;
 
@@ -184,6 +185,12 @@
     phoneLabel.textContent = momo ? "MTN MoMo number" : "Phone number";
     emailLabel.textContent = momo ? "Email address (optional)" : "Email address";
     emailInput.required = !momo;
+    if (activeVatInclusive) {
+      noteEl.textContent = momo
+        ? "This price includes 18% VAT. MoMo adds no payment fee."
+        : "This price includes 18% VAT. A 3% online payment fee is added on Pesapal's secure payment page.";
+      return;
+    }
     noteEl.textContent = momo
       ? "Prices exclude VAT. 18% VAT is added to the amount charged. MoMo adds no payment fee."
       : "Prices exclude VAT. 18% VAT and a 3% online payment fee are added to the amount charged on Pesapal's secure payment page.";
@@ -193,18 +200,20 @@
 
   function openModal(trigger) {
     activeSlug = trigger.getAttribute("data-checkout-package");
+    activeVatInclusive = trigger.hasAttribute("data-checkout-vat-inclusive");
     nameEl.textContent = trigger.getAttribute("data-checkout-name") || "Package";
 
     const displayPrice = trigger.getAttribute("data-checkout-price") || "";
     priceEl.textContent = displayPrice;
 
-    // Display only: the base price is read back out of the label the card
-    // already shows, so the markup keeps one source of truth for the number.
-    const basePrice = Number(String(displayPrice).replace(/[^\d]/g, "")) || 0;
-    if (basePrice) {
-      const vatInclusive = withVat(basePrice);
-      momoTotalEl.textContent = formatRwf(vatInclusive);
-      pesapalTotalEl.textContent = formatRwf(withPesapalFee(vatInclusive));
+    // Display only: the price is read back out of the label the card already
+    // shows, so the markup keeps one source of truth for the number. Labels
+    // are VAT-exclusive unless the trigger says the plan is sold VAT-inclusive.
+    const labelPrice = Number(String(displayPrice).replace(/[^\d]/g, "")) || 0;
+    if (labelPrice) {
+      const saleAmount = activeVatInclusive ? labelPrice : withVat(labelPrice);
+      momoTotalEl.textContent = formatRwf(saleAmount);
+      pesapalTotalEl.textContent = formatRwf(withPesapalFee(saleAmount));
     } else {
       momoTotalEl.textContent = "";
       pesapalTotalEl.textContent = "";

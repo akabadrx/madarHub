@@ -18,7 +18,24 @@ export const SERVICE_CATALOG = [
     slug: "virtual-business-address",
     price: 100000,
     billingType: "monthly",
-    description: "Professional address support at KG 42 Street, Kimironko for RDB/RRA registration and official correspondence, plus mail and document receiving and arrival notifications. Government, bank, tax, or legal approval is not guaranteed. Price excludes 18% VAT.",
+    description: "Professional address support at KG 42 Street, Kimironko for RDB/RRA registration and official correspondence, plus mail and document receiving and arrival notifications. Includes meeting-room access to meet clients at the hub in a professional environment, subject to availability, with Wi-Fi and a Smart TV for presentations. Government, bank, tax, or legal approval is not guaranteed. Price excludes 18% VAT.",
+  },
+  {
+    name: "Virtual Address / Business Address Support — 6 Months",
+    slug: "virtual-business-address-6-months",
+    price: 540000,
+    billingType: "6-months",
+    description: "Six months of virtual address support paid upfront at 90,000 RWF per month plus VAT: professional address support at KG 42 Street, Kimironko for RDB/RRA registration and official correspondence, mail and document receiving with arrival notifications, and meeting-room access to meet clients at the hub, subject to availability, with Wi-Fi and a Smart TV for presentations. Government, bank, tax, or legal approval is not guaranteed. Price excludes 18% VAT.",
+  },
+  {
+    // Sold VAT-inclusive at 1,020,000 RWF (85,000 RWF a month), but stored
+    // like every other package as its VAT-exclusive base: 1,020,000 / 1.18 =
+    // 864,406.78, rounded so checkout's +18% lands exactly on 1,020,000.
+    name: "Virtual Address / Business Address Support — 12 Months",
+    slug: "virtual-business-address-12-months",
+    price: 864407,
+    billingType: "12-months",
+    description: "Twelve months of virtual address support paid upfront at 85,000 RWF per month VAT inclusive (1,020,000 RWF in total): professional address support at KG 42 Street, Kimironko for RDB/RRA registration and official correspondence, mail and document receiving with arrival notifications, and meeting-room access to meet clients at the hub, subject to availability, with Wi-Fi and a Smart TV for presentations. Government, bank, tax, or legal approval is not guaranteed. The stored price excludes 18% VAT; with VAT it is 1,020,000 RWF.",
   },
   {
     name: "Fixed Desk + Virtual Address Package",

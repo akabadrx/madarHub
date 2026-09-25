@@ -1,4 +1,5 @@
 import type { Prisma } from "@prisma/client";
+import { isRecurringBillingType } from "@/lib/membership";
 import { normalizePhone } from "@/lib/utils";
 
 /**
@@ -51,7 +52,7 @@ export async function recordOnlinePayment(
     // payer as a day pass told a member who paid for a monthly package that
     // they were on a day pass.
     const pkg = input.packageId ? await tx.package.findUnique({ where: { id: input.packageId } }) : null;
-    const status = pkg?.billingType === "monthly" ? "Paid Monthly" : "Paid Day Pass";
+    const status = pkg && isRecurringBillingType(pkg.billingType) ? "Paid Monthly" : "Paid Day Pass";
 
     lead = await tx.lead.create({
       data: {

@@ -6,6 +6,7 @@ import { z } from "zod";
 import { getDb } from "@/lib/db";
 import { leadSchema, paymentSchema, visitSchema } from "@/lib/validation";
 import { VISIT_STATUSES } from "@/lib/constants";
+import { isRecurringBillingType } from "@/lib/membership";
 
 function refreshCrm() {
   ["/", "/leads", "/members", "/follow-ups", "/visits", "/payments", "/packages", "/lead-assistant"].forEach((path) => revalidatePath(path));
@@ -98,7 +99,9 @@ export async function createPayment(input: unknown) {
   const db = getDb();
   const pkg = data.packageId ? await db.package.findUnique({ where: { id: data.packageId } }) : null;
   const name = pkg?.name.toLowerCase() || "";
-  const nextStatus = name.includes("day pass") ? "Paid Day Pass" : name.includes("monthly") ? "Paid Monthly" : name.includes("team") ? "Active Member" : undefined;
+  // Named packages first; any other renewing package (the virtual address
+  // plans, monthly or prepaid) still makes the payer a member.
+  const nextStatus = name.includes("day pass") ? "Paid Day Pass" : name.includes("monthly") ? "Paid Monthly" : name.includes("team") ? "Active Member" : pkg && isRecurringBillingType(pkg.billingType) ? "Paid Monthly" : undefined;
 
   await db.$transaction(async (tx) => {
     await tx.payment.create({ data: { leadId: data.leadId, packageId: data.packageId || null, amount: data.amount, paymentMethod: data.paymentMethod, paymentDate: data.paymentDate, notes: data.notes || null } });

@@ -3,6 +3,7 @@ import { Banknote, CreditCard, TrendingUp, Users } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { PaymentForm } from "@/components/payment-form";
 import { getDb } from "@/lib/db";
+import { isRecurringBillingType } from "@/lib/membership";
 import { formatDate, formatRwf, leadDisplayName } from "@/lib/utils";
 
 export const metadata = { title: "Payments" };
@@ -17,7 +18,7 @@ export default async function PaymentsPage() {
     db.payment.aggregate({ where: { paymentDate: { gte: monthStart } }, _sum: { amount: true }, _count: true }), db.lead.count(),
   ]);
   const paidDayPasses = payments.filter((p) => p.package?.name.includes("Day Pass")).length;
-  const monthly = payments.filter((p) => p.package?.billingType === "monthly").length;
+  const monthly = payments.filter((p) => p.package && isRecurringBillingType(p.package.billingType)).length;
   const metrics = [["Today", formatRwf(today._sum.amount || 0), Banknote], ["This month", formatRwf(month._sum.amount || 0), TrendingUp], ["Avg. per lead", formatRwf(leadCount ? Math.round((month._sum.amount || 0) / leadCount) : 0), Users], ["Day pass / monthly", `${paidDayPasses} / ${monthly}`, CreditCard]] as const;
   return <><PageHeader eyebrow="Revenue" title="Payments" description="Record MoMo, cash, and bank payments. Package selection updates the lead stage automatically." />
     <section className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{metrics.map(([label, value, Icon]) => <div className="card p-5" key={label}><div className="flex justify-between"><div><p className="text-sm text-slate-500">{label}</p><p className="mt-2 text-xl font-bold text-[#0b1f3a]">{value}</p></div><Icon className="text-[#d4a72c]" size={21} /></div></div>)}</section>
