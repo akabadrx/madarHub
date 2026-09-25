@@ -10,7 +10,7 @@ import {
 } from "@/app/checkout-actions";
 import { PACKAGE_COPY, PACKAGE_ORDER } from "@/lib/package-copy";
 import { MOMO_MERCHANT_NAME, MOMO_USSD, WHATSAPP_NUMBER, WHATSAPP_URL } from "@/lib/site";
-import { checkoutAmounts, momoCheckoutAmounts } from "@/lib/pricing";
+import { checkoutAmounts, momoCheckoutAmounts, saleAmountWithVat } from "@/lib/pricing";
 import { formatRwf } from "@/lib/utils";
 
 const initialState: CheckoutState = {};
@@ -25,8 +25,15 @@ export type PickerPackage = {
 
 const CADENCE: Record<string, string> = {
   monthly: "RWF / month + VAT",
+  "6-months": "RWF for 6 months + VAT",
+  "12-months": "RWF for 12 months + VAT",
   daily: "RWF / day + VAT",
   hourly: "RWF + VAT",
+};
+
+/** Cadence for a package the card prices VAT-inclusive (PackageCopy.vatInclusive). */
+const CADENCE_VAT_INCLUSIVE: Record<string, string> = {
+  "12-months": "RWF for 12 months, VAT inclusive",
 };
 
 // MoMo resolves on the member's handset, so the page waits for them to find
@@ -169,6 +176,12 @@ export function PackagePicker({
           const copy = PACKAGE_COPY[pkg.slug];
           const isCurrent = pkg.slug === currentSlug;
           const busy = submitting === pkg.slug;
+          // The CRM stores every price VAT-exclusive; a plan sold at an all-in
+          // price shows that figure, which is what checkout charges on MoMo.
+          const headlinePrice = copy?.vatInclusive ? saleAmountWithVat(pkg.price) : pkg.price;
+          const cadence = copy?.vatInclusive
+            ? (CADENCE_VAT_INCLUSIVE[pkg.billingType] ?? "RWF, VAT inclusive")
+            : (CADENCE[pkg.billingType] ?? "RWF + VAT");
           const whatsapp = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
             `Hello Madar Hub, I want to subscribe to ${pkg.name}`,
           )}`;
@@ -187,9 +200,9 @@ export function PackagePicker({
               <h3>{pkg.name}</h3>
               <div className="pricing-price">
                 <div className="price">
-                  {pkg.price.toLocaleString("en-RW")}{" "}
-                  <span>{CADENCE[pkg.billingType] ?? "RWF + VAT"}</span>
+                  {headlinePrice.toLocaleString("en-RW")} <span>{cadence}</span>
                 </div>
+                {copy?.priceNote ? <span className="capacity">{copy.priceNote}</span> : null}
                 {copy?.capacity ? <span className="capacity">{copy.capacity}</span> : null}
               </div>
 

@@ -8,7 +8,7 @@ import { logout } from "@/app/auth-actions";
 import { linkAccountToLead } from "@/app/checkout-actions";
 import { getSessionUser } from "@/lib/session";
 import { getActivePackages, getCurrentPackage, getLead, getPayments } from "@/lib/crm";
-import { getMembershipPaymentStatus } from "@/lib/membership";
+import { billingPeriodMonths, getMembershipPaymentStatus } from "@/lib/membership";
 import { formatDate, formatRwf } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "My membership" };
@@ -71,7 +71,10 @@ export default async function DashboardPage({
   const paymentDue = membership?.status === "Delayed Payment" || membership?.status === "Suspended";
   const firstName = user.fullName.split(" ")[0] || "there";
   const status = membership?.status ?? "No active plan";
-  const monthlyAmount = currentPackage?.price ?? lastPayment?.amount ?? 0;
+  const planAmount = currentPackage?.price ?? lastPayment?.amount ?? 0;
+  // A plan with no package is billed monthly, like the status above assumes.
+  const periodMonths = currentPackage ? billingPeriodMonths(currentPackage.billingType) : 1;
+  const planCadence = periodMonths === 1 ? " per month" : periodMonths ? ` per ${periodMonths} months` : "";
   const oldestPayment = payments.length > 0 ? payments[payments.length - 1] : null;
 
   return (
@@ -115,7 +118,7 @@ export default async function DashboardPage({
                         ? `Payment overdue — ${plural(membership.daysUntilSuspension, "day")} before suspension.`
                         : "Suspended. Renew below to reactivate."
                     : lead
-                      ? "No monthly subscription running right now."
+                      ? "No subscription running right now."
                       : "Not connected to a membership yet."}
                 </p>
               </div>
@@ -127,7 +130,7 @@ export default async function DashboardPage({
                 <dt>Plan</dt>
                 <dd>
                   {currentPackage?.name ?? lead?.interest ?? "Not set"}
-                  {monthlyAmount > 0 ? <small>{formatRwf(monthlyAmount)} per month</small> : null}
+                  {planAmount > 0 ? <small>{formatRwf(planAmount)}{planCadence}</small> : null}
                 </dd>
               </div>
               <div className="mp-figure">

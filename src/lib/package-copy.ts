@@ -19,6 +19,10 @@ export type PackageCopy = {
   moreBenefits: string[];
   bestFor: string | null;
   moreLabel: string;
+  /** A line under the price, e.g. the monthly rate a prepaid plan works out to. */
+  priceNote?: string;
+  /** Sold at a VAT-inclusive price: the card leads with the all-in figure. */
+  vatInclusive?: boolean;
 };
 
 export const PACKAGE_COPY: Record<string, PackageCopy> = {
@@ -63,7 +67,7 @@ export const PACKAGE_COPY: Record<string, PackageCopy> = {
     "moreLabel": "Full package details"
   },
   "virtual-business-address": {
-    "kind": "Monthly Service",
+    "kind": "Monthly Plan",
     "badge": null,
     "capacity": null,
     "featured": false,
@@ -72,7 +76,9 @@ export const PACKAGE_COPY: Record<string, PackageCopy> = {
       "Use of Madar Hub's physical address for business registration support",
       "Physical address support for RDB/RRA registration and official business correspondence",
       "Mail and document receiving",
-      "Professional business address in Kimironko, KG 42 Street, Kigali"
+      "Professional business address in Kimironko, KG 42 Street, Kigali",
+      "Meeting room access to meet your clients at our hub in a professional environment, subject to availability",
+      "Wi-Fi access and a Smart TV for presentations"
     ],
     "moreBenefits": [
       "Address authorization support",
@@ -81,6 +87,53 @@ export const PACKAGE_COPY: Record<string, PackageCopy> = {
     ],
     "bestFor": "Freelancers, consultants, small businesses, remote companies, and entrepreneurs who need a physical address for business registration and official correspondence.",
     "moreLabel": "Full package details"
+  },
+  "virtual-business-address-6-months": {
+    "kind": "6-Month Plan · Paid Upfront",
+    "badge": null,
+    "capacity": null,
+    "featured": false,
+    "tagline": "A professional business address in Kigali for registration and official correspondence — ideal for freelancers, consultants, and small companies.",
+    "benefits": [
+      "Use of Madar Hub's physical address for business registration support",
+      "Physical address support for RDB/RRA registration and official business correspondence",
+      "Mail and document receiving",
+      "Professional business address in Kimironko, KG 42 Street, Kigali",
+      "Meeting room access to meet your clients at our hub in a professional environment, subject to availability",
+      "Wi-Fi access and a Smart TV for presentations"
+    ],
+    "moreBenefits": [
+      "Address authorization support",
+      "Notification when mail or documents arrive",
+      "Basic office administrative support related to address use"
+    ],
+    "bestFor": "Freelancers, consultants, small businesses, remote companies, and entrepreneurs who need a physical address for business registration and official correspondence.",
+    "moreLabel": "Full package details",
+    "priceNote": "90,000 RWF per month plus VAT"
+  },
+  "virtual-business-address-12-months": {
+    "kind": "12-Month Plan · Paid Upfront",
+    "badge": null,
+    "capacity": null,
+    "featured": false,
+    "tagline": "A professional business address in Kigali for registration and official correspondence — ideal for freelancers, consultants, and small companies.",
+    "benefits": [
+      "Use of Madar Hub's physical address for business registration support",
+      "Physical address support for RDB/RRA registration and official business correspondence",
+      "Mail and document receiving",
+      "Professional business address in Kimironko, KG 42 Street, Kigali",
+      "Meeting room access to meet your clients at our hub in a professional environment, subject to availability",
+      "Wi-Fi access and a Smart TV for presentations"
+    ],
+    "moreBenefits": [
+      "Address authorization support",
+      "Notification when mail or documents arrive",
+      "Basic office administrative support related to address use"
+    ],
+    "bestFor": "Freelancers, consultants, small businesses, remote companies, and entrepreneurs who need a physical address for business registration and official correspondence.",
+    "moreLabel": "Full package details",
+    "priceNote": "85,000 RWF per month, VAT inclusive",
+    "vatInclusive": true
   },
   "fixed-desk-virtual-address": {
     "kind": "Monthly Bundle",
@@ -227,6 +280,8 @@ export const PACKAGE_ORDER: string[] = [
   "coworking-day-pass",
   "fixed-desk-monthly",
   "virtual-business-address",
+  "virtual-business-address-6-months",
+  "virtual-business-address-12-months",
   "student-study-pass",
   "meeting-room-half-day",
   "fixed-desk-virtual-address",
