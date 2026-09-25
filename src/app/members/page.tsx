@@ -5,7 +5,7 @@ import { StatusBadge } from "@/components/status-badge";
 import { PortalInviteButton } from "@/components/portal-invite-button";
 import { ACTIVE_MEMBER_STATUSES } from "@/lib/constants";
 import { getDb } from "@/lib/db";
-import { getMembershipPaymentStatus } from "@/lib/membership";
+import { getMembershipPaymentStatus, isRecurringBillingType } from "@/lib/membership";
 import { netRevenueAmount } from "@/lib/revenue";
 import { formatDate, formatRwf, leadDisplayName, whatsappUrl } from "@/lib/utils";
 
@@ -67,9 +67,9 @@ export default async function MembersPage({
     );
   });
   const renewedThisMonth = new Set(monthlyPayments.map((payment) => payment.leadId)).size;
-  const monthlyPlans = activeMembers.filter((member) => {
+  const subscriptionPlans = activeMembers.filter((member) => {
     const pkg = member.payments[0]?.package || member.suggestedPackage;
-    return pkg?.billingType === "monthly";
+    return pkg ? isRecurringBillingType(pkg.billingType) : false;
   }).length;
   const monthlyRevenue = monthlyPayments.reduce(
     (sum, payment) => sum + netRevenueAmount(payment._sum?.amount || 0, payment.packageId),
@@ -82,7 +82,7 @@ export default async function MembersPage({
   }).length;
   const metrics = [
     ["Active now", activeMembers.length, UserRoundCheck, "text-emerald-700 bg-emerald-50"],
-    ["Monthly plans", monthlyPlans, Users, "text-blue-700 bg-blue-50"],
+    ["Subscription plans", subscriptionPlans, Users, "text-blue-700 bg-blue-50"],
     ["Renewed this month", renewedThisMonth, CalendarCheck2, "text-violet-700 bg-violet-50"],
     ["Monthly revenue", formatRwf(monthlyRevenue), Banknote, "text-amber-700 bg-amber-50"],
     ["Needs payment", needsPayment, AlertTriangle, "text-rose-700 bg-rose-50"],

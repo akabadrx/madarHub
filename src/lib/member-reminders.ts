@@ -6,10 +6,11 @@ import { formatDate, formatRwf, leadDisplayName } from "@/lib/utils";
 /**
  * Payment reminders sent to the member, not to staff.
  *
- * Who is reminded follows getMembershipPaymentStatus: a member on a monthly
- * package, or an active member with no package assigned (a negotiated deal),
- * both of whom are due a month after their last payment. A day pass or an
- * hourly booking is a one-off and is never chased.
+ * Who is reminded follows getMembershipPaymentStatus: a member on a renewing
+ * package, due one billing period (1, 6 or 12 months) after their last
+ * payment, or an active member with no package assigned (a negotiated deal),
+ * due a month after. A day pass or an hourly booking is a one-off and is
+ * never chased.
  *
  * Three stages, each sent at most once per due date. The unique constraint on
  * MemberReminderLog is what enforces that, so a cron that runs twice, or a
