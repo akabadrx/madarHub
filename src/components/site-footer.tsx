@@ -22,6 +22,11 @@ const QUICK_LINKS = [
   ["contact.html", "Contact"],
 ];
 
+const POLICY_LINKS = [
+  ["privacy.html", "Privacy Policy"],
+  ["refund-policy.html", "Refund Policy"],
+];
+
 export function SiteFooter() {
   return (
     <footer className="footer">
@@ -71,6 +76,11 @@ export function SiteFooter() {
               <li>
                 <a href="/membership">My Membership</a>
               </li>
+              {POLICY_LINKS.map(([href, label]) => (
+                <li key={href}>
+                  <a href={siteUrl(href)}>{label}</a>
+                </li>
+              ))}
             </ul>
           </div>
           <div>
