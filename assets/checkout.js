@@ -90,6 +90,7 @@
           <p class="checkout-error" data-checkout-error aria-live="polite" hidden></p>
           <button type="submit" class="button primary" data-checkout-submit>Send MoMo Prompt</button>
           <p class="checkout-note" data-checkout-note></p>
+          <p class="checkout-note">Refunds follow our <a href="/refund-policy.html" target="_blank" rel="noopener">refund policy</a>.</p>
         </form>
       </div>
 

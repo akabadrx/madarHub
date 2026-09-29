@@ -3188,6 +3188,16 @@ body.checkout-modal-open {
   text-align: center;
 }
 
+.checkout-note a {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.checkout-note a:hover,
+.checkout-note a:focus-visible {
+  color: var(--navy);
+}
+
 /* ---------- Checkout: payment method chooser ---------- */
 
 .checkout-methods {
