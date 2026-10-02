@@ -1991,6 +1991,22 @@ button, input, select, textarea {
   font-size: 1.4rem;
 }
 
+/* Longer-term plans tucked inside a card's "Full package details", each
+   price followed by its own pay button. */
+.pricing-plans {
+  display: grid;
+  gap: 10px;
+}
+
+.pricing-plans .price-tier.stacked {
+  margin-bottom: 0;
+}
+
+.pricing-plans .button {
+  width: 100%;
+  margin-bottom: 6px;
+}
+
 .price-label {
   color: var(--muted);
   font-size: 0.88rem;
