@@ -33,6 +33,23 @@ if (header) {
   window.addEventListener("scroll", updateHeader, { passive: true });
 }
 
+// The member session cookie is httpOnly and scoped to /membership, so ask the
+// portal whether this visitor is signed in and swap the header link to match.
+const membershipLinks = document.querySelectorAll(".membership-link");
+
+if (membershipLinks.length && window.fetch) {
+  fetch("/membership/api/auth/session", { credentials: "same-origin", cache: "no-store" })
+    .then((response) => (response.ok ? response.json() : null))
+    .then((session) => {
+      if (!session || !session.signedIn) return;
+      membershipLinks.forEach((link) => {
+        link.href = "/membership";
+        link.textContent = "My Account";
+      });
+    })
+    .catch(() => {});
+}
+
 const contactForm = document.querySelector("[data-contact-form]");
 
 if (contactForm) {
