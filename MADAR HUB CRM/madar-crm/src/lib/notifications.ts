@@ -1,6 +1,7 @@
 import { getDb } from "@/lib/db";
 import { ACTIVE_MEMBER_STATUSES } from "@/lib/constants";
-import { getMembershipPaymentStatus, type MembershipPaymentInfo } from "@/lib/membership";
+import type { MembershipPaymentInfo } from "@/lib/membership";
+import { getSubscriptionPaymentStatus, subscriptionName } from "@/lib/subscriptions";
 import { leadDisplayName, formatDate, formatRwf } from "@/lib/utils";
 
 function dayStart(date = new Date()) { const d = new Date(date); d.setHours(0, 0, 0, 0); return d; }
@@ -131,26 +132,29 @@ type DelayedMember = {
   id: string;
   name: string | null;
   phone: string;
+  /** Which of the member's subscriptions is late, when it has a label. */
+  subscription: string | null;
   info: MembershipPaymentInfo;
 };
 
 async function fetchDelayedPaymentMembers(): Promise<DelayedMember[]> {
   const db = getDb();
-  const members = await db.lead.findMany({
-    where: { status: { in: [...ACTIVE_MEMBER_STATUSES] } },
+  // Per subscription: one person can be late on one business and paid up on another.
+  const subscriptions = await db.subscription.findMany({
+    where: { status: "active", lead: { status: { in: [...ACTIVE_MEMBER_STATUSES] } } },
     include: {
-      suggestedPackage: true,
-      payments: { include: { package: true }, orderBy: { paymentDate: "desc" }, take: 1 },
+      lead: true,
+      package: true,
+      payments: { orderBy: { paymentDate: "desc" }, take: 1 },
     },
   });
 
   const delayed: DelayedMember[] = [];
-  for (const member of members) {
-    const latestPayment = member.payments[0];
-    const memberPackage = latestPayment?.package || member.suggestedPackage;
-    const info = getMembershipPaymentStatus(memberPackage, latestPayment?.paymentDate, latestPayment?.amount);
+  for (const sub of subscriptions) {
+    const info = getSubscriptionPaymentStatus(sub, sub.payments[0]);
     if (info?.status === "Delayed Payment") {
-      delayed.push({ id: member.id, name: member.name, phone: member.phone, info });
+      const member = sub.lead;
+      delayed.push({ id: member.id, name: member.name, phone: member.phone, subscription: sub.label?.trim() ? subscriptionName(sub) : null, info });
     }
   }
   return delayed;
@@ -161,6 +165,7 @@ function buildPaymentReminderRow(member: DelayedMember, crmBaseUrl: string) {
   return `<tr>
     <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;">
       <a href="${crmBaseUrl}/leads/${member.id}" style="color:#0b1f3a;font-weight:600;text-decoration:none;">${name}</a>
+      ${member.subscription ? `<div style="font-size:12px;color:#9a7110;font-weight:600;margin-top:2px;">${escapeHtml(member.subscription)}</div>` : ""}
       <div style="font-size:12px;color:#64748b;margin-top:2px;">${escapeHtml(member.phone)}</div>
     </td>
     <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;font-size:13px;color:#475569;">${formatDate(member.info.nextPaymentDate)}</td>

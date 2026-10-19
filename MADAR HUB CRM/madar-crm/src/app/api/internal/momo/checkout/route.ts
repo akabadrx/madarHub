@@ -25,6 +25,9 @@ const bodySchema = z.object({
   customerEmail: z.string().trim().email().optional().or(z.literal("")),
   customerPhone: z.string().trim().min(7).max(20),
   leadId: z.string().trim().min(1).nullable().optional(),
+  // The subscription the member pressed Renew on. Omitted for a purchase from
+  // the package list, which fulfilment places itself.
+  subscriptionId: z.string().trim().min(1).nullable().optional(),
 });
 
 export async function POST(req: Request) {
@@ -52,7 +55,7 @@ export async function POST(req: Request) {
     if (!parsed.success) {
       return NextResponse.json({ error: "Invalid checkout request." }, { status: 400 });
     }
-    const { packageSlug, customerName, customerEmail, customerPhone, leadId } = parsed.data;
+    const { packageSlug, customerName, customerEmail, customerPhone, leadId, subscriptionId } = parsed.data;
 
     const phone = normalizePhone(customerPhone);
     if (!/^250\d{9}$/.test(phone)) {
@@ -76,6 +79,16 @@ export async function POST(req: Request) {
       verifiedLeadId = lead?.id ?? null;
     }
 
+    // Likewise a subscription is only kept if it belongs to that Lead.
+    let verifiedSubscriptionId: string | null = null;
+    if (subscriptionId && verifiedLeadId) {
+      const sub = await db.subscription.findFirst({
+        where: { id: subscriptionId, leadId: verifiedLeadId },
+        select: { id: true },
+      });
+      verifiedSubscriptionId = sub?.id ?? null;
+    }
+
     const merchantReference = `MHMOMOM-${Date.now()}-${randomBytes(3).toString("hex")}`;
     const { amount, chargedAmount } = momoCheckoutAmounts(pkg.price);
 
@@ -93,6 +106,7 @@ export async function POST(req: Request) {
         status: "PENDING",
         source: "membership",
         leadId: verifiedLeadId,
+        subscriptionId: verifiedSubscriptionId,
       },
     });
 

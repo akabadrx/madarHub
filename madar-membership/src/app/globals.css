@@ -511,6 +511,47 @@
 .mp-due p { margin: 0; color: #6B4E12; font-size: 0.92rem; line-height: 1.55; flex: 1 1 320px; }
 .mp-due strong { color: var(--navy); font-weight: 700; }
 
+/* ---- subscriptions: one row per thing the member pays for ---- */
+
+.mp-subs { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+
+.mp-sub {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px 20px;
+}
+
+.mp-sub.is-due { border-color: rgba(214, 168, 79, 0.55); background: var(--soft-gold-bg); }
+
+.mp-sub-main { flex: 1 1 280px; min-width: 0; }
+
+.mp-sub-title { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+
+.mp-sub-title h3 {
+  font-family: 'Montserrat', system-ui, sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--navy);
+  margin: 0;
+}
+
+.mp-sub-plan { margin: 4px 0 0; color: var(--muted); font-size: 0.85rem; }
+.mp-sub-meta { margin: 8px 0 0; color: var(--muted); font-size: 0.88rem; font-variant-numeric: tabular-nums; }
+.mp-sub-due { color: #6B4E12; font-weight: 700; }
+
+.mp-sub-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.mp-sub-actions form { margin: 0; }
+
+@media (max-width: 640px) {
+  .mp-sub { padding: 16px; }
+  .mp-sub-actions, .mp-sub-actions form, .mp-sub-actions .button { width: 100%; }
+}
+
 /* ---- payment history ---- */
 
 .mp-table-scroll { overflow-x: auto; }

@@ -42,38 +42,19 @@ const CADENCE_VAT_INCLUSIVE: Record<string, string> = {
 const POLL_INTERVAL_MS = 3000;
 const POLL_CEILING_MS = 180000;
 
-type MomoState =
+export type MomoState =
   | { phase: "idle" }
   | { phase: "waiting"; reference: string; phone: string; amount: number; packageName: string }
   | { phase: "done"; packageName: string }
   | { phase: "error"; message: string };
 
 /**
- * The package cards from the public pricing page, rendered for a member who is
- * already signed in.
- *
- * The markup deliberately reuses the marketing site's own classes
- * (.pricing-card, .package-benefits, .pricing-card-footer, .checkout-*), which
- * are already loaded from assets/styles.css — so these are the same cards and
- * the same payment dialog, not a copy that can drift.
- *
- * The difference from the public page is what the buttons do. There the member
- * is a stranger and has to type their details; here they are known, so both
- * buttons post only the package and identity comes from the session.
+ * The MoMo flow — push a prompt, poll until the member answers, show the
+ * dialog — shared by the package cards and each subscription's Renew button,
+ * so both behave identically.
  */
-export function PackagePicker({
-  packages,
-  currentSlug,
-  momoAvailable = false,
-}: {
-  packages: PickerPackage[];
-  currentSlug?: string | null;
-  /** False while the CRM's MoMo credentials are missing or still on sandbox. */
-  momoAvailable?: boolean;
-}) {
+export function useMomoCheckout() {
   const router = useRouter();
-  const [state, formAction, pending] = useActionState(startCheckout, initialState);
-  const [submitting, setSubmitting] = useState<string | null>(null);
   const [momo, setMomo] = useState<MomoState>({ phase: "idle" });
   const [momoStarting, startMomo] = useTransition();
   const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -139,6 +120,53 @@ export function PackagePicker({
     };
   }, [momo, router, stopPolling]);
 
+  const start = (slug: string, subscriptionId: string | null = null) => {
+    startMomo(async () => {
+      const result = await startMomoCheckout(slug, subscriptionId);
+      if ("error" in result) {
+        setMomo({ phase: "error", message: result.error });
+        return;
+      }
+      setMomo({ phase: "waiting", ...result });
+    });
+  };
+
+  const dialog =
+    momo.phase !== "idle" ? <MomoDialog state={momo} onClose={() => setMomo({ phase: "idle" })} /> : null;
+
+  return { momo, momoStarting, start, dialog };
+}
+
+/**
+ * The package cards from the public pricing page, rendered for a member who is
+ * already signed in.
+ *
+ * The markup deliberately reuses the marketing site's own classes
+ * (.pricing-card, .package-benefits, .pricing-card-footer, .checkout-*), which
+ * are already loaded from assets/styles.css — so these are the same cards and
+ * the same payment dialog, not a copy that can drift.
+ *
+ * The difference from the public page is what the buttons do. There the member
+ * is a stranger and has to type their details; here they are known, so both
+ * buttons post only the package and identity comes from the session.
+ */
+export function PackagePicker({
+  packages,
+  currentSlug,
+  currentSubscriptionId = null,
+  momoAvailable = false,
+}: {
+  packages: PickerPackage[];
+  currentSlug?: string | null;
+  /** The subscription the "Your plan" card renews, so its payment lands on it. */
+  currentSubscriptionId?: string | null;
+  /** False while the CRM's MoMo credentials are missing or still on sandbox. */
+  momoAvailable?: boolean;
+}) {
+  const [state, formAction, pending] = useActionState(startCheckout, initialState);
+  const [submitting, setSubmitting] = useState<string | null>(null);
+  const { momo, momoStarting, start, dialog } = useMomoCheckout();
+
   if (packages.length === 0) {
     return <p className="mp-empty">No packages are available for online payment right now.</p>;
   }
@@ -151,14 +179,7 @@ export function PackagePicker({
 
   const onMomoClick = (slug: string) => {
     setSubmitting(slug);
-    startMomo(async () => {
-      const result = await startMomoCheckout(slug);
-      if ("error" in result) {
-        setMomo({ phase: "error", message: result.error });
-        return;
-      }
-      setMomo({ phase: "waiting", ...result });
-    });
+    start(slug, slug === currentSlug ? currentSubscriptionId : null);
   };
 
   const busyAnywhere = pending || momoStarting || momo.phase === "waiting";
@@ -262,6 +283,9 @@ export function PackagePicker({
                     their identity comes from the session on the server. */}
                 <form action={formAction}>
                   <input type="hidden" name="packageSlug" value={pkg.slug} />
+                  {isCurrent && currentSubscriptionId ? (
+                    <input type="hidden" name="subscriptionId" value={currentSubscriptionId} />
+                  ) : null}
                   <button
                     type="submit"
                     className={momoAvailable ? "button outline" : "button pesapal"}
@@ -315,9 +339,7 @@ export function PackagePicker({
         )}
       </p>
 
-      {momo.phase !== "idle" ? (
-        <MomoDialog state={momo} onClose={() => setMomo({ phase: "idle" })} />
-      ) : null}
+      {dialog}
     </>
   );
 }
@@ -331,7 +353,7 @@ export function PackagePicker({
  * the member's handset, and dismissing the dialog would suggest it had been
  * cancelled when it has not.
  */
-function MomoDialog({ state, onClose }: { state: MomoState; onClose: () => void }) {
+export function MomoDialog({ state, onClose }: { state: MomoState; onClose: () => void }) {
   const waiting = state.phase === "waiting";
 
   return (

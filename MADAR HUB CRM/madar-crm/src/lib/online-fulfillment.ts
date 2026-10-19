@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { isRecurringBillingType } from "@/lib/membership";
+import { resolvePaymentSubscription, subscriptionName } from "@/lib/subscriptions";
 import { normalizePhone } from "@/lib/utils";
 
 /**
@@ -17,6 +18,10 @@ import { normalizePhone } from "@/lib/utils";
 export type OnlinePaymentInput = {
   /** Known upfront for a portal order; null for a public one, which is matched by phone. */
   leadId: string | null;
+  /** The subscription a portal member chose to renew; null to decide here. */
+  subscriptionId: string | null;
+  /** "membership" (signed-in portal member) or "website" (public pricing page). */
+  source: string;
   customerName: string;
   customerPhone: string | null;
   packageId: string | null;
@@ -69,10 +74,26 @@ export async function recordOnlinePayment(
     });
   }
 
+  // A portal member with several subscriptions who buys from the package list
+  // rather than a subscription's Renew button is adding another one. A public
+  // payer with several is left for staff to place: guessing would renew the
+  // wrong business and leave the right one looking overdue.
+  const subscriptionId = await resolvePaymentSubscription(tx, {
+    leadId: lead.id,
+    packageId: input.packageId,
+    requested: input.subscriptionId,
+    whenAmbiguous: input.source === "membership" ? "create" : "leave",
+  });
+  const subscription = subscriptionId
+    ? await tx.subscription.findUnique({ where: { id: subscriptionId }, include: { package: true } })
+    : null;
+  const unplaced = !subscriptionId && input.packageId && (await tx.subscription.count({ where: { leadId: lead.id, status: "active" } })) > 1;
+
   await tx.payment.create({
     data: {
       leadId: lead.id,
       packageId: input.packageId,
+      subscriptionId,
       amount: input.amount,
       paymentMethod: input.paymentMethod,
       notes: `Online payment. ${input.providerLabel} ref ${input.reference}.`,
@@ -89,7 +110,7 @@ export async function recordOnlinePayment(
     data: {
       leadId: lead.id,
       type: "payment",
-      content: `Paid ${input.amount.toLocaleString()} RWF for ${input.packageName} via ${input.providerLabel} (online checkout)`,
+      content: `Paid ${input.amount.toLocaleString()} RWF for ${input.packageName}${subscription?.label ? ` (${subscriptionName(subscription)})` : ""} via ${input.providerLabel} (online checkout)${unplaced ? ". This member has several subscriptions: choose which one this payment renews in Payment history." : ""}`,
     },
   });
 

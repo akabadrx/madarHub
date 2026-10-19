@@ -32,6 +32,8 @@ export async function fulfillMomoPayment(merchantReference: string) {
 
       const leadId = await recordOnlinePayment(tx, {
         leadId: payment.leadId,
+        subscriptionId: payment.subscriptionId,
+        source: payment.source,
         customerName: payment.customerName,
         customerPhone: payment.customerPhone,
         packageId: payment.packageId,

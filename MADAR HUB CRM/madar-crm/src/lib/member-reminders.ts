@@ -1,6 +1,7 @@
 import { getDb } from "@/lib/db";
 import { ACTIVE_MEMBER_STATUSES } from "@/lib/constants";
-import { getMembershipPaymentStatus, type MembershipPaymentInfo } from "@/lib/membership";
+import type { MembershipPaymentInfo } from "@/lib/membership";
+import { getSubscriptionPaymentStatus, subscriptionName } from "@/lib/subscriptions";
 import { formatDate, formatRwf, leadDisplayName } from "@/lib/utils";
 
 /**
@@ -11,6 +12,9 @@ import { formatDate, formatRwf, leadDisplayName } from "@/lib/utils";
  * payment, or an active member with no package assigned (a negotiated deal),
  * due a month after. A day pass or an hourly booking is a one-off and is
  * never chased.
+ *
+ * Reminders are per subscription, not per person: someone holding three
+ * subscriptions gets a separate email for each one that falls due, naming it.
  *
  * Three stages, each sent at most once per due date. The unique constraint on
  * MemberReminderLog is what enforces that, so a cron that runs twice, or a
@@ -26,6 +30,9 @@ const FINAL_NOTICE_DAYS_LEFT = 2;
 
 export type ReminderCandidate = {
   leadId: string;
+  subscriptionId: string;
+  /** The subscription's own label ("Zuna Logistics"), when it has one. */
+  subscriptionLabel: string | null;
   name: string;
   email: string;
   stage: ReminderStage;
@@ -75,26 +82,23 @@ export async function findReminderCandidates(now = new Date()): Promise<{
   skippedNoEmail: number;
 }> {
   const db = getDb();
-  const members = await db.lead.findMany({
-    where: { status: { in: [...ACTIVE_MEMBER_STATUSES] } },
+  const subscriptions = await db.subscription.findMany({
+    where: { status: "active", lead: { status: { in: [...ACTIVE_MEMBER_STATUSES] } } },
     include: {
-      suggestedPackage: true,
-      payments: { include: { package: true }, orderBy: { paymentDate: "desc" }, take: 1 },
+      lead: true,
+      package: true,
+      payments: { orderBy: { paymentDate: "desc" }, take: 1 },
     },
   });
 
   const candidates: ReminderCandidate[] = [];
   let skippedNoEmail = 0;
 
-  for (const member of members) {
-    const latestPayment = member.payments[0];
-    const memberPackage = latestPayment?.package || member.suggestedPackage;
-    const info = getMembershipPaymentStatus(
-      memberPackage,
-      latestPayment?.paymentDate,
-      latestPayment?.amount,
-      now,
-    );
+  for (const sub of subscriptions) {
+    const member = sub.lead;
+    const latestPayment = sub.payments[0];
+    const memberPackage = sub.package;
+    const info = getSubscriptionPaymentStatus(sub, latestPayment, now);
     if (!info) continue;
 
     const stage = stageFor(info, now);
@@ -105,20 +109,16 @@ export async function findReminderCandidates(now = new Date()): Promise<{
       continue;
     }
 
-    const already = await db.memberReminderLog.findUnique({
-      where: {
-        leadId_dueDate_stage: {
-          leadId: member.id,
-          dueDate: startOfDay(info.nextPaymentDate),
-          stage,
-        },
-      },
+    const already = await db.memberReminderLog.findFirst({
+      where: { subscriptionId: sub.id, dueDate: startOfDay(info.nextPaymentDate), stage },
       select: { id: true },
     });
     if (already) continue;
 
     candidates.push({
       leadId: member.id,
+      subscriptionId: sub.id,
+      subscriptionLabel: sub.label?.trim() ? subscriptionName(sub) : null,
       name: leadDisplayName(member.name, member.phone),
       email: member.email,
       stage,
@@ -169,6 +169,7 @@ export function buildMemberReminderHtml(candidate: ReminderCandidate, portalUrl:
         ${COPY[stage].lead(days)}
       </p>
       <table style="width:100%;border-collapse:collapse;font-size:14px;margin-bottom:24px;">
+        ${candidate.subscriptionLabel ? `<tr><td style="padding:8px 0;color:#667085;">Subscription</td><td style="padding:8px 0;color:#0b1f3a;font-weight:600;text-align:right;">${escapeHtml(candidate.subscriptionLabel)}</td></tr>` : ""}
         <tr><td style="padding:8px 0;color:#667085;">Package</td><td style="padding:8px 0;color:#0b1f3a;font-weight:600;text-align:right;">${candidate.packageName ?? "Monthly membership"}</td></tr>
         <tr><td style="padding:8px 0;color:#667085;">Due date</td><td style="padding:8px 0;color:#0b1f3a;font-weight:600;text-align:right;">${formatDate(info.nextPaymentDate)}</td></tr>
         ${amount > 0 ? `<tr><td style="padding:8px 0;color:#667085;">Amount</td><td style="padding:8px 0;color:#0b1f3a;font-weight:700;text-align:right;">${formatRwf(amount)}</td></tr>` : ""}
@@ -188,7 +189,14 @@ export function buildMemberReminderHtml(candidate: ReminderCandidate, portalUrl:
 }
 
 export function reminderSubject(candidate: ReminderCandidate): string {
-  return COPY[candidate.stage].subject(candidate.name);
+  const subject = COPY[candidate.stage].subject(candidate.name);
+  // Someone with several subscriptions must be able to tell these apart in
+  // their inbox without opening each one.
+  return candidate.subscriptionLabel ? `${candidate.subscriptionLabel}: ${subject}` : subject;
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch]!);
 }
 
 /**
@@ -216,6 +224,7 @@ export async function sendMemberReminders(opts: {
       skippedNoEmail,
       recipients: candidates.map((c) => ({
         name: c.name,
+        subscription: c.subscriptionLabel,
         email: c.email,
         stage: c.stage,
         due: formatDate(c.info.nextPaymentDate),
@@ -251,6 +260,7 @@ export async function sendMemberReminders(opts: {
       await db.memberReminderLog.create({
         data: {
           leadId: candidate.leadId,
+          subscriptionId: candidate.subscriptionId,
           dueDate: startOfDay(candidate.info.nextPaymentDate),
           stage: candidate.stage,
           sentTo: candidate.email,

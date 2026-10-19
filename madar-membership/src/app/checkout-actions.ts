@@ -18,7 +18,8 @@ export type CheckoutState = { error?: string };
 /**
  * Starts a Pesapal checkout for the signed-in member.
  *
- * The member supplies only which package they want. Their name, phone, email
+ * The member supplies only which package they want — and, when they pressed
+ * Renew on one of their subscriptions, which one. Their name, phone, email
  * and Lead come from the session and the CRM record, never from the form, so
  * nobody can bill under another person's identity — and so a member never has
  * to retype details the system already holds.
@@ -29,6 +30,8 @@ export async function startCheckout(_prev: CheckoutState, formData: FormData): P
 
   const packageSlug = String(formData.get("packageSlug") ?? "").trim();
   if (!packageSlug) return { error: "Choose a package first." };
+  // The CRM checks this belongs to the member before it is used.
+  const subscriptionId = String(formData.get("subscriptionId") ?? "").trim() || null;
 
   const pkg = await getPackageBySlug(packageSlug);
   if (!pkg) return { error: "That package is not available for online payment right now." };
@@ -63,6 +66,7 @@ export async function startCheckout(_prev: CheckoutState, formData: FormData): P
         customerEmail: user.email,
         customerPhone: phone,
         leadId: user.leadId,
+        subscriptionId,
       }),
       cache: "no-store",
     });
@@ -121,7 +125,10 @@ export type MomoStartResult =
  * `checkMomoStatus`. As with the Pesapal action, identity comes from the
  * session and the CRM record, never from the form.
  */
-export async function startMomoCheckout(packageSlug: string): Promise<MomoStartResult> {
+export async function startMomoCheckout(
+  packageSlug: string,
+  subscriptionId: string | null = null,
+): Promise<MomoStartResult> {
   const user = await getSessionUser();
   if (!user) redirect("/login");
 
@@ -160,6 +167,7 @@ export async function startMomoCheckout(packageSlug: string): Promise<MomoStartR
         customerEmail: user.email,
         customerPhone: phone,
         leadId: user.leadId,
+        subscriptionId,
       }),
       cache: "no-store",
     });
