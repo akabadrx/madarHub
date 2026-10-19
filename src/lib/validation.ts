@@ -25,6 +25,10 @@ export const leadSchema = z.object({
 export const paymentSchema = z.object({
   leadId: z.string().min(1),
   packageId: z.string().optional(),
+  // A subscription id, "new" to open another, or empty to let the server
+  // decide (a person's only subscription, or their first).
+  subscriptionId: z.string().optional(),
+  subscriptionLabel: z.string().trim().max(100).optional(),
   amount: z.coerce.number().int().positive("Amount must be greater than zero"),
   paymentMethod: z.enum(PAYMENT_METHODS),
   paymentDate: z.union([z.string().min(1), z.date()]).transform((value) => new Date(value)),
@@ -36,4 +40,13 @@ export const visitSchema = z.object({
   visitDate: z.union([z.string().min(1), z.date()]).transform((value) => new Date(value)),
   status: z.enum(VISIT_STATUSES),
   notes: z.string().max(2000).optional(),
+});
+
+export const subscriptionSchema = z.object({
+  id: z.string().optional(),
+  leadId: z.string().min(1),
+  label: z.string().trim().max(100).optional(),
+  packageId: z.string().optional(),
+  startDate: optionalDate,
+  notes: z.string().trim().max(2000).optional(),
 });

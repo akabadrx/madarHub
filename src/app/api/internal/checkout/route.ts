@@ -25,6 +25,9 @@ const bodySchema = z.object({
   customerEmail: z.string().trim().email(),
   customerPhone: z.string().trim().min(7).max(20),
   leadId: z.string().trim().min(1).nullable().optional(),
+  // The subscription the member pressed Renew on. Omitted for a purchase from
+  // the package list, which fulfilment places itself.
+  subscriptionId: z.string().trim().min(1).nullable().optional(),
 });
 
 export async function POST(req: Request) {
@@ -42,7 +45,7 @@ export async function POST(req: Request) {
     if (!parsed.success) {
       return NextResponse.json({ error: "Invalid checkout request." }, { status: 400 });
     }
-    const { packageSlug, customerName, customerEmail, customerPhone, leadId } = parsed.data;
+    const { packageSlug, customerName, customerEmail, customerPhone, leadId, subscriptionId } = parsed.data;
 
     const db = getDb();
     const pkg = await db.package.findUnique({ where: { slug: packageSlug } });
@@ -56,6 +59,16 @@ export async function POST(req: Request) {
     if (leadId) {
       const lead = await db.lead.findUnique({ where: { id: leadId }, select: { id: true } });
       verifiedLeadId = lead?.id ?? null;
+    }
+
+    // Likewise a subscription is only kept if it belongs to that Lead.
+    let verifiedSubscriptionId: string | null = null;
+    if (subscriptionId && verifiedLeadId) {
+      const sub = await db.subscription.findFirst({
+        where: { id: subscriptionId, leadId: verifiedLeadId },
+        select: { id: true },
+      });
+      verifiedSubscriptionId = sub?.id ?? null;
     }
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL;
@@ -81,6 +94,7 @@ export async function POST(req: Request) {
         status: "PENDING",
         source: "membership",
         leadId: verifiedLeadId,
+        subscriptionId: verifiedSubscriptionId,
       },
     });
 
