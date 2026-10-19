@@ -28,6 +28,25 @@ export type CrmPayment = {
   paymentMethod: string;
   paymentDate: Date;
   packageName: string | null;
+  /** What the subscription this payment renewed is called, if it has a label. */
+  subscriptionLabel: string | null;
+};
+
+/**
+ * One of the member's active subscriptions. A member can hold several — one
+ * per business, say — each with its own plan and due date.
+ */
+export type CrmSubscription = {
+  id: string;
+  label: string | null;
+  packageName: string | null;
+  /** Null for a plan that cannot be bought online (no slug, or inactive). */
+  packageSlug: string | null;
+  price: number | null;
+  billingType: string | null;
+  startDate: Date;
+  lastPaymentDate: Date | null;
+  lastPaymentAmount: number | null;
 };
 
 export type CrmPackage = {
@@ -79,9 +98,11 @@ export function isActiveMember(status: string): boolean {
 /** The member's payments, newest first. */
 export async function getPayments(leadId: string, limit = 12): Promise<CrmPayment[]> {
   return getDb().$queryRaw<CrmPayment[]>`
-    SELECT p.id, p.amount, p."paymentMethod", p."paymentDate", pkg.name AS "packageName"
+    SELECT p.id, p.amount, p."paymentMethod", p."paymentDate", pkg.name AS "packageName",
+           s.label AS "subscriptionLabel"
     FROM public."Payment" p
     LEFT JOIN public."Package" pkg ON pkg.id = p."packageId"
+    LEFT JOIN public."Subscription" s ON s.id = p."subscriptionId"
     WHERE p."leadId" = ${leadId}
     ORDER BY p."paymentDate" DESC
     LIMIT ${limit}
@@ -89,8 +110,36 @@ export async function getPayments(leadId: string, limit = 12): Promise<CrmPaymen
 }
 
 /**
+ * The member's active subscriptions, oldest first, each with the latest payment
+ * booked against it — which is what sets that subscription's due date.
+ */
+export async function getSubscriptions(leadId: string): Promise<CrmSubscription[]> {
+  return getDb().$queryRaw<CrmSubscription[]>`
+    SELECT s.id, s.label, s."startDate",
+           pkg.name AS "packageName",
+           CASE WHEN pkg.active THEN pkg.slug END AS "packageSlug",
+           pkg.price, pkg."billingType",
+           lp."paymentDate" AS "lastPaymentDate", lp.amount AS "lastPaymentAmount"
+    FROM public."Subscription" s
+    LEFT JOIN public."Package" pkg ON pkg.id = s."packageId"
+    LEFT JOIN LATERAL (
+      SELECT p."paymentDate", p.amount
+      FROM public."Payment" p
+      WHERE p."subscriptionId" = s.id
+      ORDER BY p."paymentDate" DESC
+      LIMIT 1
+    ) lp ON true
+    WHERE s."leadId" = ${leadId} AND s.status = 'active'
+    ORDER BY s."createdAt" ASC
+  `;
+}
+
+/**
  * The package to bill this member on: whatever their most recent payment was
  * for, falling back to the package staff suggested on the lead.
+ *
+ * Only used for a member with no subscription on record; anyone with one is
+ * billed on that subscription's plan instead (see getSubscriptions).
  */
 export async function getCurrentPackage(leadId: string): Promise<CrmPackage | null> {
   const rows = await getDb().$queryRaw<CrmPackage[]>`

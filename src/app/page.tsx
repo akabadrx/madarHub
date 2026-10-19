@@ -3,12 +3,25 @@ import { redirect } from "next/navigation";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { PackagePicker } from "@/components/package-picker";
+import { SubscriptionList, type SubscriptionItem } from "@/components/subscription-list";
 import { isMomoAvailable } from "@/app/checkout-actions";
 import { logout } from "@/app/auth-actions";
 import { linkAccountToLead } from "@/app/checkout-actions";
 import { getSessionUser } from "@/lib/session";
-import { getActivePackages, getCurrentPackage, getLead, getPayments } from "@/lib/crm";
-import { billingPeriodMonths, getMembershipPaymentStatus } from "@/lib/membership";
+import {
+  getActivePackages,
+  getCurrentPackage,
+  getLead,
+  getPayments,
+  getSubscriptions,
+  type CrmPackage,
+  type CrmSubscription,
+} from "@/lib/crm";
+import {
+  billingPeriodMonths,
+  getMembershipPaymentStatus,
+  type MembershipPaymentInfo,
+} from "@/lib/membership";
 import { formatDate, formatRwf } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "My membership" };
@@ -37,6 +50,19 @@ function plural(n: number, word: string) {
   return `${n} ${word}${n === 1 ? "" : "s"}`;
 }
 
+/** Worst first: the card's chip reports the subscription that most needs attention. */
+const SEVERITY: Record<string, number> = { Suspended: 0, "Delayed Payment": 1, Active: 2 };
+
+function subscriptionPackage(sub: CrmSubscription): CrmPackage | null {
+  return sub.packageName && sub.billingType && sub.price !== null
+    ? { name: sub.packageName, billingType: sub.billingType, price: sub.price }
+    : null;
+}
+
+function subscriptionStatus(sub: CrmSubscription): MembershipPaymentInfo | null {
+  return getMembershipPaymentStatus(subscriptionPackage(sub), sub.lastPaymentDate, sub.lastPaymentAmount ?? 0);
+}
+
 export default async function DashboardPage({
   searchParams,
 }: {
@@ -55,18 +81,70 @@ export default async function DashboardPage({
 
   const lead = leadId ? await getLead(leadId) : null;
 
-  const [payments, currentPackage, packages] = await Promise.all([
+  const [payments, subscriptions, packages] = await Promise.all([
     lead ? getPayments(lead.id) : Promise.resolve([]),
-    lead ? getCurrentPackage(lead.id) : Promise.resolve(null),
+    lead ? getSubscriptions(lead.id) : Promise.resolve([]),
     getActivePackages(),
   ]);
 
-  const lastPayment = payments[0] ?? null;
-  const membership = lead
-    ? getMembershipPaymentStatus(currentPackage, lastPayment?.paymentDate ?? null, lastPayment?.amount ?? 0)
-    : null;
+  // A member can hold several subscriptions — one per business — each due on
+  // its own date. With one, the page reads exactly as a single membership did.
+  const multiple = subscriptions.length > 1;
+  const single = subscriptions.length === 1 ? subscriptions[0] : null;
+  const statuses = subscriptions.map((sub) => ({ sub, info: subscriptionStatus(sub) }));
 
-  const currentSlug = packages.find((p) => p.name === currentPackage?.name)?.slug ?? null;
+  // Someone with no subscription on record yet is billed lead-wide, as before.
+  const currentPackage = single
+    ? subscriptionPackage(single)
+    : lead && subscriptions.length === 0
+      ? await getCurrentPackage(lead.id)
+      : null;
+  const lastPayment = single
+    ? single.lastPaymentDate
+      ? { paymentDate: single.lastPaymentDate, amount: single.lastPaymentAmount ?? 0 }
+      : null
+    : (payments[0] ?? null);
+
+  const membership = multiple
+    ? (statuses
+        .flatMap(({ info }) => (info ? [info] : []))
+        .sort(
+          (a, b) =>
+            SEVERITY[a.status] - SEVERITY[b.status] ||
+            a.nextPaymentDate.getTime() - b.nextPaymentDate.getTime(),
+        )[0] ?? null)
+    : lead
+      ? getMembershipPaymentStatus(currentPackage, lastPayment?.paymentDate ?? null, lastPayment?.amount ?? 0)
+      : null;
+
+  const dueCount = statuses.filter(({ info }) => info && info.status !== "Active").length;
+  const totalDue = statuses.reduce((sum, { info }) => sum + (info?.dueAmount ?? 0), 0);
+  const earliestNext = statuses
+    .flatMap(({ info }) => (info ? [info.nextPaymentDate] : []))
+    .sort((a, b) => a.getTime() - b.getTime())[0];
+
+  const subscriptionItems: SubscriptionItem[] = statuses.map(({ sub, info }) => ({
+    id: sub.id,
+    name: sub.label?.trim() || sub.packageName || "Membership",
+    planName: sub.label?.trim() ? sub.packageName : null,
+    packageSlug: sub.packageSlug,
+    status: info?.status ?? null,
+    nextPayment: info ? formatDate(info.nextPaymentDate) : null,
+    dueText: info
+      ? info.dueAmount > 0
+        ? `${formatRwf(info.dueAmount)} due${
+            info.status === "Delayed Payment"
+              ? ` — ${plural(info.daysUntilSuspension, "day")} before suspension`
+              : ""
+          }`
+        : "Nothing due yet"
+      : "No payment recorded yet",
+    isDue: Boolean(info && info.status !== "Active"),
+  }));
+
+  const currentSlug = multiple
+    ? null
+    : (single?.packageSlug ?? packages.find((p) => p.name === currentPackage?.name)?.slug ?? null);
   const momoAvailable = await isMomoAvailable();
   const paymentDue = membership?.status === "Delayed Payment" || membership?.status === "Suspended";
   const firstName = user.fullName.split(" ")[0] || "there";
@@ -111,7 +189,11 @@ export default async function DashboardPage({
                 <p className="mp-hero-eyebrow">Madar Hub Membership</p>
                 <h2 className="mp-hero-name">{user.fullName || lead?.name}</h2>
                 <p className="mp-hero-meta">
-                  {membership
+                  {multiple
+                    ? dueCount > 0
+                      ? `${dueCount} of your ${subscriptions.length} subscriptions ${dueCount === 1 ? "needs" : "need"} payment.`
+                      : `All ${subscriptions.length} subscriptions are up to date.`
+                    : membership
                     ? membership.status === "Active"
                       ? "Your membership is up to date."
                       : membership.status === "Delayed Payment"
@@ -125,6 +207,31 @@ export default async function DashboardPage({
               <span className={`mp-chip ${CHIP_CLASS[status] ?? "none"}`}>{status}</span>
             </div>
 
+            {multiple ? (
+            <dl className="mp-figures">
+              <div className="mp-figure">
+                <dt>Subscriptions</dt>
+                <dd>
+                  {subscriptions.length}
+                  <small>{dueCount > 0 ? `${dueCount} need${dueCount === 1 ? "s" : ""} payment` : "All up to date"}</small>
+                </dd>
+              </div>
+              <div className="mp-figure">
+                <dt>Next payment</dt>
+                <dd className={totalDue > 0 ? "is-due" : undefined}>
+                  {earliestNext ? formatDate(earliestNext) : "—"}
+                  <small>{totalDue > 0 ? `${formatRwf(totalDue)} due now in total` : "Nothing due yet"}</small>
+                </dd>
+              </div>
+              <div className="mp-figure">
+                <dt>Member since</dt>
+                <dd>
+                  {oldestPayment ? formatDate(oldestPayment.paymentDate) : "—"}
+                  <small>{`${plural(payments.length, "payment")} on record`}</small>
+                </dd>
+              </div>
+            </dl>
+            ) : (
             <dl className="mp-figures">
               <div className="mp-figure">
                 <dt>Plan</dt>
@@ -158,15 +265,32 @@ export default async function DashboardPage({
                 </dd>
               </div>
             </dl>
+            )}
           </section>
+
+          {multiple ? (
+            <section className="mp-section" aria-label="Your subscriptions">
+              <div className="mp-section-head">
+                <h2>Your subscriptions</h2>
+                <p className="mp-section-note">Each one renews on its own date</p>
+              </div>
+              {user.phone ? (
+                <SubscriptionList subscriptions={subscriptionItems} momoAvailable={momoAvailable} />
+              ) : (
+                <SubscriptionList
+                  subscriptions={subscriptionItems.map((item) => ({ ...item, packageSlug: null }))}
+                />
+              )}
+            </section>
+          ) : null}
 
           <section className="mp-section">
             <div className="mp-section-head">
-              <h2>{paymentDue ? "Renew your membership" : "Pay for a package"}</h2>
+              <h2>{multiple ? "Add another package" : paymentDue ? "Renew your membership" : "Pay for a package"}</h2>
               <p className="mp-section-note">MTN MoMo or card, paid securely</p>
             </div>
 
-            {paymentDue && membership ? (
+            {!multiple && paymentDue && membership ? (
               <div className="mp-due">
                 <p>
                   <strong>{formatRwf(membership.dueAmount)}</strong> is due
@@ -182,6 +306,7 @@ export default async function DashboardPage({
               <PackagePicker
                 packages={packages}
                 currentSlug={currentSlug}
+                currentSubscriptionId={single?.id ?? null}
                 momoAvailable={momoAvailable}
               />
             ) : (
@@ -209,6 +334,7 @@ export default async function DashboardPage({
                     <tr>
                       <th>Date</th>
                       <th>Package</th>
+                      {multiple ? <th>Subscription</th> : null}
                       <th>Method</th>
                       <th className="num">Amount</th>
                     </tr>
@@ -218,6 +344,7 @@ export default async function DashboardPage({
                       <tr key={payment.id}>
                         <td className="mp-date">{formatDate(payment.paymentDate)}</td>
                         <td>{payment.packageName ?? "—"}</td>
+                        {multiple ? <td>{payment.subscriptionLabel ?? "—"}</td> : null}
                         <td>
                           <span className="mp-method">{payment.paymentMethod}</span>
                         </td>
