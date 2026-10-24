@@ -50,7 +50,10 @@
 
     <main id="main" class="page-main">
       <section class="hero compact" aria-labelledby="about-title">
-        <img class="hero-art" src="assets/madar-orbit-visual.png" alt="" aria-hidden="true" />
+        <picture>
+          <source type="image/webp" srcset="assets/madar-orbit-visual-800.webp 800w, assets/madar-orbit-visual-1400.webp 1400w" sizes="(max-width: 520px) 580px, (max-width: 1050px) 720px, min(58vw, 790px)" />
+          <img class="hero-art" src="assets/madar-orbit-visual.png" width="1400" height="1000" alt="" aria-hidden="true" decoding="async" />
+        </picture>
         <div class="hero-inner">
           <div class="hero-content">
             <span class="hero-kicker">About Madar Hub</span>
