@@ -3,14 +3,15 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { BarChart3, CalendarDays, CreditCard, LayoutDashboard, LogOut, Menu, MessageSquareText, Package, Settings, UserRoundCheck, Users, X, Clock3, Sparkles } from "lucide-react";
+import { BarChart3, CalendarDays, CreditCard, FileText, Landmark, LayoutDashboard, LogOut, Menu, MessageSquareText, Package, Settings, ShoppingCart, UserRoundCheck, Users, X, Clock3, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { logout } from "@/app/auth-actions";
 
 const links = [
   ["Dashboard", "/", LayoutDashboard], ["Leads", "/leads", Users], ["Active Members", "/members", UserRoundCheck], ["Lead Assistant", "/lead-assistant", Sparkles],
   ["Follow-ups", "/follow-ups", Clock3],
-  ["Visits", "/visits", CalendarDays], ["Payments", "/payments", CreditCard], ["Packages", "/packages", Package],
+  ["Visits", "/visits", CalendarDays], ["Payments", "/payments", CreditCard], ["Invoices (EBM)", "/invoices", FileText],
+  ["Purchases", "/purchases", ShoppingCart], ["Tax & Finance", "/tax", Landmark], ["Packages", "/packages", Package],
   ["Message Templates", "/templates", MessageSquareText], ["Settings", "/settings", Settings],
 ] as const;
 

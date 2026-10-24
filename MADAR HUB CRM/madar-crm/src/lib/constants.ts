@@ -51,6 +51,9 @@ export const STATUS_STYLES: Record<string, string> = {
   "Active": "bg-green-50 text-green-700 ring-green-200",
   "Delayed Payment": "bg-amber-50 text-amber-800 ring-amber-200",
   "Suspended": "bg-rose-50 text-rose-700 ring-rose-200",
+  "Draft": "bg-amber-50 text-amber-800 ring-amber-200",
+  "Issued": "bg-green-50 text-green-700 ring-green-200",
+  "Void": "bg-gray-50 text-gray-600 ring-gray-200",
 };
 
 export const DEFAULT_TEMPLATES = [
