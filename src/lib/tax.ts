@@ -13,9 +13,19 @@ export const VAT_RATE_PERCENT = 18;
  */
 export const CIT_RATE_PERCENT = 28;
 
-/** The VAT inside a VAT-inclusive amount: 18/118 of it. */
+/** Rounds to the cent, the precision EBM and the VAT annex use. */
+export function cents(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+/** A stored amount (a Prisma Decimal) as a plain number of francs. */
+export function amount(value: { toNumber(): number } | number): number {
+  return typeof value === "number" ? value : value.toNumber();
+}
+
+/** The VAT inside a VAT-inclusive amount: 18/118 of it, to the cent as EBM computes it. */
 export function vatFromInclusive(totalInclusive: number): number {
-  return Math.round((totalInclusive * VAT_RATE_PERCENT) / (100 + VAT_RATE_PERCENT));
+  return cents((totalInclusive * VAT_RATE_PERCENT) / (100 + VAT_RATE_PERCENT));
 }
 
 /**
@@ -59,8 +69,8 @@ export const PURCHASE_CATEGORIES = [
 export const CAPITAL_CATEGORY = "Equipment & furniture (capital)";
 
 /** Input VAT counts only with an EBM receipt from a VAT-registered supplier. */
-export function isInputVatClaimable(purchase: { supplierTin: string | null; receiptNumber: string | null; sdcId: string | null; vatAmount: number }) {
-  return Boolean(purchase.supplierTin && purchase.receiptNumber && purchase.sdcId && purchase.vatAmount > 0);
+export function isInputVatClaimable(purchase: { supplierTin: string | null; receiptNumber: string | null; sdcId: string | null; vatAmount: { toNumber(): number } | number }) {
+  return Boolean(purchase.supplierTin && purchase.receiptNumber && purchase.sdcId && amount(purchase.vatAmount) > 0);
 }
 
 /**

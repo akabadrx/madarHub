@@ -1,9 +1,9 @@
 import { AlertTriangle, ShoppingCart, Receipt, Trash2 } from "lucide-react";
-import { deletePurchase } from "@/app/tax-actions";
+import { deletePurchase, setPurchaseCategory } from "@/app/tax-actions";
 import { PageHeader } from "@/components/page-header";
 import { PurchaseForm } from "@/components/purchase-form";
 import { getDb } from "@/lib/db";
-import { isInputVatClaimable, quarterPeriod, quarterOf } from "@/lib/tax";
+import { amount, cents, isInputVatClaimable, PURCHASE_CATEGORIES, quarterPeriod, quarterOf } from "@/lib/tax";
 import { formatDate, formatRwf } from "@/lib/utils";
 
 export const metadata = { title: "Purchases" };
@@ -11,13 +11,14 @@ export const metadata = { title: "Purchases" };
 export default async function PurchasesPage() {
   const now = new Date();
   const quarter = quarterPeriod(now.getUTCFullYear(), quarterOf(now));
-  const purchases = await getDb().purchase.findMany({ orderBy: [{ purchaseDate: "desc" }, { createdAt: "desc" }], take: 300 });
+  const rows = await getDb().purchase.findMany({ orderBy: [{ purchaseDate: "desc" }, { createdAt: "desc" }], take: 300 });
+  const purchases = rows.map((row) => ({ ...row, totalAmount: amount(row.totalAmount), vatAmount: amount(row.vatAmount) }));
   const thisQuarter = purchases.filter((row) => row.purchaseDate >= quarter.start && row.purchaseDate < quarter.end);
   const claimable = thisQuarter.filter(isInputVatClaimable);
   const missing = thisQuarter.filter((row) => row.vatAmount > 0 && !isInputVatClaimable(row));
   const metrics = [
-    [`Spent in ${quarter.label}`, formatRwf(thisQuarter.reduce((sum, row) => sum + row.totalAmount, 0)), ShoppingCart],
-    ["Input VAT you can claim", formatRwf(claimable.reduce((sum, row) => sum + row.vatAmount, 0)), Receipt],
+    [`Spent in ${quarter.label}`, formatRwf(cents(thisQuarter.reduce((sum, row) => sum + row.totalAmount, 0))), ShoppingCart],
+    ["Input VAT you can claim", formatRwf(cents(claimable.reduce((sum, row) => sum + row.vatAmount, 0))), Receipt],
     ["VAT receipts missing details", String(missing.length), AlertTriangle],
   ] as const;
 
@@ -31,7 +32,7 @@ export default async function PurchasesPage() {
         return <tr key={row.id}>
           <td>{formatDate(row.purchaseDate)}</td>
           <td><span className="font-semibold">{row.supplierName}</span>{row.supplierTin && <p className="mt-0.5 font-mono text-xs text-slate-500">TIN {row.supplierTin}</p>}{row.description && <p className="mt-0.5 text-xs text-slate-500">{row.description}</p>}</td>
-          <td>{row.category}</td>
+          <td><form action={setPurchaseCategory} className="flex items-center gap-1.5"><input type="hidden" name="id" value={row.id} /><select aria-label={`Category for ${row.supplierName}`} name="category" defaultValue={row.category} className="field min-h-8 w-auto py-1 text-xs">{PURCHASE_CATEGORIES.map((category) => <option key={category}>{category}</option>)}</select><button className="btn btn-outline min-h-8 px-2 text-xs">Save</button></form></td>
           <td>{row.receiptNumber || row.sdcId ? <span className="font-mono text-xs">{row.receiptNumber || "—"}<br />{row.sdcId || "—"}</span> : "—"}</td>
           <td className="font-semibold">{formatRwf(row.totalAmount)}</td>
           <td>{formatRwf(row.vatAmount)}</td>

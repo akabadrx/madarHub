@@ -5,7 +5,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getDb } from "@/lib/db";
-import { vatFromInclusive } from "@/lib/tax";
+import { parseAnnex } from "@/lib/rra-annex";
+import { cents, PURCHASE_CATEGORIES, vatFromInclusive } from "@/lib/tax";
 import { invoiceReceiptSchema, invoiceSchema, purchaseSchema } from "@/lib/validation";
 
 function refreshFinance() {
@@ -24,7 +25,7 @@ export async function createInvoice(input: unknown): Promise<{ error?: string }>
     const existing = await db.invoice.findUnique({ where: { paymentId: data.paymentId }, select: { id: true } });
     if (existing) return { error: "That payment already has an invoice." };
   }
-  const totalAmount = data.unitPrice * data.quantity;
+  const totalAmount = cents(data.unitPrice * data.quantity);
   const invoice = await db.invoice.create({
     data: {
       leadId: optional(data.leadId),
@@ -121,4 +122,52 @@ export async function deletePurchase(formData: FormData) {
   const id = z.string().min(1).parse(formData.get("id"));
   await getDb().purchase.delete({ where: { id } });
   refreshFinance();
+}
+
+export async function setPurchaseCategory(formData: FormData) {
+  const id = z.string().min(1).parse(formData.get("id"));
+  const category = z.enum(PURCHASE_CATEGORIES).parse(formData.get("category"));
+  await getDb().purchase.update({ where: { id }, data: { category } });
+  refreshFinance();
+}
+
+export type AnnexImportResult = { ok: boolean; message: string; errors: string[] };
+
+/**
+ * Loads a sales or purchases annex already filed on RRA e-Tax into the
+ * ledgers, so past quarters sit beside the ones filed from here. Receipts
+ * already on file (same SDC ID and receipt number) are skipped, so importing
+ * the same file twice changes nothing.
+ */
+export async function importAnnex(_previous: AnnexImportResult | null, formData: FormData): Promise<AnnexImportResult> {
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) return { ok: false, message: "Choose an annex file to import.", errors: [] };
+  const parsed = parseAnnex(await file.text());
+  if (parsed.kind === "unknown") return { ok: false, message: "That does not look like an RRA VAT annex.", errors: parsed.errors };
+  if (parsed.errors.length) return { ok: false, message: "Nothing was imported. Fix these lines and try again.", errors: parsed.errors };
+
+  const db = getDb();
+  const key = (row: { sdcId: string | null; receiptNumber: string | null }) => `${row.sdcId}/${row.receiptNumber}`;
+  let imported = 0;
+  if (parsed.kind === "sales") {
+    const result = await db.invoice.createMany({
+      skipDuplicates: true,
+      data: parsed.rows.map((row) => {
+        const total = cents(row.netAmount + row.vatAmount);
+        return { buyerTin: row.buyerTin, buyerName: row.buyerName || null, itemName: row.description || "Sale", quantity: 1, unitPrice: total, totalAmount: total, vatAmount: row.vatAmount, status: "issued", receiptNumber: row.receiptNumber, sdcId: row.sdcId, receiptDate: row.date, notes: `Imported from ${file.name}` };
+      }),
+    });
+    imported = result.count;
+  } else {
+    const existing = new Set((await db.purchase.findMany({ where: { sdcId: { in: parsed.rows.map((row) => row.sdcId) } }, select: { sdcId: true, receiptNumber: true } })).map(key));
+    const fresh = parsed.rows.filter((row) => !existing.has(key(row)));
+    const result = await db.purchase.createMany({
+      data: fresh.map((row) => ({ supplierTin: row.supplierTin, supplierName: row.supplierName || "Unknown supplier", description: row.description || null, category: "Other", purchaseDate: row.date, receiptNumber: row.receiptNumber, sdcId: row.sdcId, totalAmount: cents(row.netAmount + row.vatAmount), vatAmount: row.vatAmount, notes: `Imported from ${file.name}` })),
+    });
+    imported = result.count;
+  }
+  refreshFinance();
+  const skipped = parsed.rows.length - imported;
+  const what = parsed.kind === "sales" ? "sales" : "purchases";
+  return { ok: true, message: `Imported ${imported} ${what}${skipped ? `; ${skipped} already on file were skipped` : ""}.${parsed.kind === "purchases" && imported ? " They are filed under Other: set each one's category on the Purchases page for the yearly return." : ""}`, errors: [] };
 }

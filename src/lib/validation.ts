@@ -88,7 +88,8 @@ export const purchaseSchema = z.object({
   purchaseDate: day,
   receiptNumber: z.string().trim().max(50).optional(),
   sdcId: z.string().trim().max(50).optional(),
-  totalAmount: z.coerce.number().int().positive("Total must be greater than zero"),
-  vatAmount: z.coerce.number().int().min(0),
+  // Receipts carry cents; anything finer is rounded away.
+  totalAmount: z.coerce.number().positive("Total must be greater than zero").transform((value) => Math.round(value * 100) / 100),
+  vatAmount: z.coerce.number().min(0).transform((value) => Math.round(value * 100) / 100),
   notes: z.string().trim().max(2000).optional(),
 }).refine((data) => data.vatAmount < data.totalAmount, { message: "VAT must be less than the total", path: ["vatAmount"] });

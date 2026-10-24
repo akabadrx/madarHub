@@ -4,7 +4,7 @@ import { InvoiceForm, type KnownBuyer } from "@/components/invoice-form";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
 import { getDb } from "@/lib/db";
-import { invoiceMethodForPayment, invoicePaymentMethod, kigaliDay } from "@/lib/tax";
+import { amount, invoiceMethodForPayment, invoicePaymentMethod, kigaliDay } from "@/lib/tax";
 import { formatDate, formatRwf, leadDisplayName } from "@/lib/utils";
 
 export const metadata = { title: "Invoices" };
@@ -87,12 +87,12 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
       </div>
       <div className="table-wrap mt-4"><table className="data-table mobile-card-table"><thead><tr><th>Transfer date</th><th>Buyer</th><th>Item</th><th>Paid by</th><th>Total</th><th>VAT</th><th>EBM receipt</th><th>Status</th></tr></thead><tbody>
         {invoices.map((invoice) => <tr key={invoice.id}>
-          <td>{formatDate(invoice.paymentDate)}</td>
-          <td><Link className="font-semibold hover:underline" href={`/invoices/${invoice.id}`}>{invoice.buyerName || invoice.buyerPhone}</Link>{invoice.buyerTin && <p className="mt-0.5 font-mono text-xs text-slate-500">TIN {invoice.buyerTin}</p>}</td>
+          <td>{formatDate(invoice.paymentDate ?? invoice.receiptDate)}</td>
+          <td><Link className="font-semibold hover:underline" href={`/invoices/${invoice.id}`}>{invoice.buyerName || invoice.buyerPhone || invoice.buyerTin}</Link>{invoice.buyerTin && <p className="mt-0.5 font-mono text-xs text-slate-500">TIN {invoice.buyerTin}</p>}</td>
           <td>{invoice.itemName}{invoice.quantity > 1 && ` × ${invoice.quantity}`}</td>
-          <td>{invoicePaymentMethod(invoice.paymentMethod)?.label ?? invoice.paymentMethod}</td>
-          <td className="font-semibold">{formatRwf(invoice.totalAmount)}</td>
-          <td>{formatRwf(invoice.vatAmount)}</td>
+          <td>{invoice.paymentMethod ? invoicePaymentMethod(invoice.paymentMethod)?.label ?? invoice.paymentMethod : "—"}</td>
+          <td className="font-semibold">{formatRwf(amount(invoice.totalAmount))}</td>
+          <td>{formatRwf(amount(invoice.vatAmount))}</td>
           <td>{invoice.receiptNumber ? <span className="font-mono text-xs">{invoice.receiptNumber}<br />{invoice.sdcId}</span> : <Link className="text-xs font-semibold text-[#9a7110] hover:underline" href={`/invoices/${invoice.id}`}>Open EBM sheet</Link>}</td>
           <td><StatusBadge status={STATUS_LABELS[invoice.status] ?? invoice.status} /></td>
         </tr>)}
