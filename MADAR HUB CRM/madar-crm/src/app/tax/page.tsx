@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AlertTriangle, CalendarClock, Download, Landmark, Receipt, ShoppingCart, TrendingUp } from "lucide-react";
+import { AnnexImport } from "@/components/annex-import";
 import { PageHeader } from "@/components/page-header";
 import { getDb } from "@/lib/db";
 import { CAPITAL_CATEGORY, CIT_RATE_PERCENT, incomeTaxDueDate, periodFromParams, vatDueDate, type TaxPeriod } from "@/lib/tax";
@@ -8,9 +9,13 @@ import { basePathUrl, formatDate, formatRwf } from "@/lib/utils";
 
 export const metadata = { title: "Tax & Finance" };
 
-function exportHref(kind: "sales" | "purchases", period: TaxPeriod) {
+function exportHref(kind: "sales" | "purchases", period: TaxPeriod, format: "annex" | "csv") {
   // A plain download link, so the base path is not added for us as <Link> would.
-  return basePathUrl(`/api/tax/export?kind=${kind}&year=${period.year}&q=${period.quarter ?? "year"}`);
+  return basePathUrl(`/api/tax/export?kind=${kind}&year=${period.year}&q=${period.quarter ?? "year"}&format=${format}`);
+}
+
+function Downloads({ kind, period }: { kind: "sales" | "purchases"; period: TaxPeriod }) {
+  return <div className="flex flex-wrap gap-2"><a className="btn btn-primary" href={exportHref(kind, period, "annex")}><Download size={16} />e-Tax annex (.txt)</a><a className="btn btn-outline" href={exportHref(kind, period, "csv")}><Download size={16} />CSV</a></div>;
 }
 
 function plural(count: number, word: string) {
@@ -33,7 +38,7 @@ function Warnings({ ledger }: { ledger: Ledger }) {
 
 function SalesTable({ ledger, period }: { ledger: Ledger; period: TaxPeriod }) {
   return <section className="card mb-5 overflow-hidden">
-    <div className="flex flex-wrap items-center justify-between gap-3 p-5 pb-0"><div><h2 className="font-bold text-[#0b1f3a]">Sales ledger</h2><p className="mt-1 text-sm text-slate-500">Issued EBM invoices dated in {period.label}.</p></div><a className="btn btn-outline" href={exportHref("sales", period)}><Download size={16} />Download CSV</a></div>
+    <div className="flex flex-wrap items-center justify-between gap-3 p-5 pb-0"><div><h2 className="font-bold text-[#0b1f3a]">Sales ledger</h2><p className="mt-1 text-sm text-slate-500">Issued EBM invoices dated in {period.label}.</p></div><Downloads kind="sales" period={period} /></div>
     <div className="table-wrap mt-4"><table className="data-table mobile-card-table"><thead><tr><th>Date</th><th>Receipt no.</th><th>SDC ID</th><th>Buyer TIN</th><th>Buyer</th><th>Excl. VAT</th><th>VAT</th><th>Total</th></tr></thead><tbody>
       {ledger.sales.map((row) => <tr key={row.id}><td>{formatDate(row.receiptDate)}</td><td className="font-mono text-xs"><Link className="hover:underline" href={`/invoices/${row.id}`}>{row.receiptNumber}</Link></td><td className="font-mono text-xs">{row.sdcId}</td><td className="font-mono text-xs">{row.buyerTin || "—"}</td><td>{row.buyerName || row.buyerPhone}</td><td>{formatRwf(row.netAmount)}</td><td>{formatRwf(row.vatAmount)}</td><td className="font-semibold">{formatRwf(row.totalAmount)}</td></tr>)}
       {ledger.sales.length === 0 ? <tr><td colSpan={8} className="py-8 text-center text-sm text-slate-500">No issued invoices in this period.</td></tr> : <tr className="bg-slate-50 font-bold"><td colSpan={5}>Total</td><td>{formatRwf(ledger.totals.salesNet)}</td><td>{formatRwf(ledger.totals.outputVat)}</td><td>{formatRwf(ledger.totals.salesGross)}</td></tr>}
@@ -43,7 +48,7 @@ function SalesTable({ ledger, period }: { ledger: Ledger; period: TaxPeriod }) {
 
 function PurchasesTable({ ledger, period }: { ledger: Ledger; period: TaxPeriod }) {
   return <section className="card mb-5 overflow-hidden">
-    <div className="flex flex-wrap items-center justify-between gap-3 p-5 pb-0"><div><h2 className="font-bold text-[#0b1f3a]">Purchases ledger</h2><p className="mt-1 text-sm text-slate-500">Purchases dated in {period.label}. Only rows marked claimable count toward input VAT.</p></div><a className="btn btn-outline" href={exportHref("purchases", period)}><Download size={16} />Download CSV</a></div>
+    <div className="flex flex-wrap items-center justify-between gap-3 p-5 pb-0"><div><h2 className="font-bold text-[#0b1f3a]">Purchases ledger</h2><p className="mt-1 text-sm text-slate-500">Purchases dated in {period.label}. Only rows marked claimable count toward input VAT, and only they go in the e-Tax annex.</p></div><Downloads kind="purchases" period={period} /></div>
     <div className="table-wrap mt-4"><table className="data-table mobile-card-table"><thead><tr><th>Date</th><th>Receipt no.</th><th>SDC ID</th><th>Supplier TIN</th><th>Supplier</th><th>Excl. VAT</th><th>VAT</th><th>Total</th><th>Input VAT</th></tr></thead><tbody>
       {ledger.purchases.map((row) => <tr key={row.id}><td>{formatDate(row.purchaseDate)}</td><td className="font-mono text-xs">{row.receiptNumber || "—"}</td><td className="font-mono text-xs">{row.sdcId || "—"}</td><td className="font-mono text-xs">{row.supplierTin || "—"}</td><td>{row.supplierName}<p className="mt-0.5 text-xs text-slate-500">{row.category}</p></td><td>{formatRwf(row.netAmount)}</td><td>{formatRwf(row.vatAmount)}</td><td className="font-semibold">{formatRwf(row.totalAmount)}</td><td>{row.claimable ? <span className="text-xs font-semibold text-emerald-700">Claimable</span> : <span className="text-xs text-slate-400">{row.vatAmount > 0 ? "Not claimable" : "No VAT"}</span>}</td></tr>)}
       {ledger.purchases.length === 0 ? <tr><td colSpan={9} className="py-8 text-center text-sm text-slate-500">No purchases in this period.</td></tr> : <tr className="bg-slate-50 font-bold"><td colSpan={5}>Total</td><td>{formatRwf(ledger.totals.purchasesNet)}</td><td>{formatRwf(ledger.purchases.reduce((sum, row) => sum + row.vatAmount, 0))}</td><td>{formatRwf(ledger.totals.purchasesGross)}</td><td>{formatRwf(ledger.totals.inputVat)}</td></tr>}
@@ -112,5 +117,11 @@ export default async function TaxPage({ searchParams }: { searchParams: Promise<
       <SalesTable ledger={ledger} period={period} />
       <PurchasesTable ledger={ledger} period={period} />
     </>}
+
+    <section className="card p-5">
+      <h2 className="font-bold text-[#0b1f3a]">Import an annex you already filed</h2>
+      <p className="mb-4 mt-1 text-sm text-slate-500">Upload a Sales_Ver_1.1.txt or Purchase_Ver_1.1.txt from an earlier e-Tax declaration to bring that quarter in. Receipts already here are skipped.</p>
+      <AnnexImport />
+    </section>
   </>;
 }

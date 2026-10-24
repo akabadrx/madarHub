@@ -314,20 +314,24 @@ model Invoice {
   payment          Payment?  @relation(fields: [paymentId], references: [id], onDelete: SetNull)
   packageId        String?
   package          Package?  @relation(fields: [packageId], references: [id], onDelete: SetNull)
-  // Nine-digit RRA TIN. Null for an individual buyer without one.
+  // Nine-digit RRA TIN. Null for an individual buyer without one (written
+  // as 999999999 in RRA's annex).
   buyerTin         String?
   buyerName        String?
-  buyerPhone       String
+  // Null only on invoices imported from a filed annex, which carries no phone.
+  buyerPhone       String?
   itemName         String
   quantity         Int       @default(1)
-  // VAT-inclusive, as EBM takes them. VAT is 18/118 of the total.
-  unitPrice        Int
-  totalAmount      Int
-  vatAmount        Int
-  // "bank_transfer" (bank slip, Pesapal) | "mobile_money" | "bank_cheque"
-  paymentMethod    String
-  // When the money arrived, not when the invoice was issued.
-  paymentDate      DateTime
+  // VAT-inclusive, as EBM takes them, to the cent: EBM works VAT out to two
+  // decimals (a 5,000 sale carries 762.71 of VAT) and the annex must match.
+  unitPrice        Decimal   @db.Decimal(14, 2)
+  totalAmount      Decimal   @db.Decimal(14, 2)
+  vatAmount        Decimal   @db.Decimal(14, 2)
+  // "bank_transfer" (bank slip, Pesapal) | "mobile_money" | "bank_cheque".
+  // Null on an imported invoice; the annex does not say how it was paid.
+  paymentMethod    String?
+  // When the money arrived, not when the invoice was issued. Null as above.
+  paymentDate      DateTime?
   paymentReference String?
   // "draft" (not yet in EBM) | "issued" | "void" (cancelled with a refund
   // receipt in EBM; kept for the audit trail, left out of every total)
@@ -359,9 +363,11 @@ model Purchase {
   purchaseDate  DateTime
   receiptNumber String?
   sdcId         String?
-  // VAT-inclusive total and the VAT within it; 0 for an untaxed purchase.
-  totalAmount   Int
-  vatAmount     Int      @default(0)
+  // VAT-inclusive total and the VAT within it, to the cent; 0 VAT for an
+  // untaxed purchase. VAT is taken from the receipt, not worked out: a receipt
+  // mixing taxed and untaxed items carries less than 18/118 of its total.
+  totalAmount   Decimal  @db.Decimal(14, 2)
+  vatAmount     Decimal  @default(0) @db.Decimal(14, 2)
   notes         String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
