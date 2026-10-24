@@ -59,6 +59,7 @@ model Lead {
   portalInvites   PortalInvite[]
   reminderLogs    MemberReminderLog[]
   subscriptions   Subscription[]
+  invoices        Invoice[]
 
   @@index([status])
   @@index([followUpDate])
@@ -82,6 +83,7 @@ model Payment {
   notes          String?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
+  invoice        Invoice?
 
   @@index([leadId])
   @@index([paymentDate])
@@ -118,6 +120,7 @@ model Package {
   pesapalPayments  PesapalPayment[]
   momoPayments     MomoPayment[]
   subscriptions    Subscription[]
+  invoices         Invoice[]
 }
 
 model Interaction {
@@ -293,4 +296,75 @@ model Subscription {
 
   @@index([leadId])
   @@index([status])
+}
+
+// A sales invoice issued on RRA's EBM. The CRM does not talk to EBM itself:
+// staff type the figures from the invoice page into EBM, then copy the receipt
+// number and SDC ID it prints back here. That turns the draft into a line of
+// the sales ledger the VAT and income tax reports are built from.
+//
+// Buyer and item details are copied in rather than read through the lead or
+// package, so a filed invoice never changes when a contact or price does.
+model Invoice {
+  id               String    @id @default(cuid())
+  // Tax records outlive the CRM records they were raised from.
+  leadId           String?
+  lead             Lead?     @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  paymentId        String?   @unique
+  payment          Payment?  @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  packageId        String?
+  package          Package?  @relation(fields: [packageId], references: [id], onDelete: SetNull)
+  // Nine-digit RRA TIN. Null for an individual buyer without one.
+  buyerTin         String?
+  buyerName        String?
+  buyerPhone       String
+  itemName         String
+  quantity         Int       @default(1)
+  // VAT-inclusive, as EBM takes them. VAT is 18/118 of the total.
+  unitPrice        Int
+  totalAmount      Int
+  vatAmount        Int
+  // "bank_transfer" (bank slip, Pesapal) | "mobile_money" | "bank_cheque"
+  paymentMethod    String
+  // When the money arrived, not when the invoice was issued.
+  paymentDate      DateTime
+  paymentReference String?
+  // "draft" (not yet in EBM) | "issued" | "void" (cancelled with a refund
+  // receipt in EBM; kept for the audit trail, left out of every total)
+  status           String    @default("draft")
+  receiptNumber    String?
+  sdcId            String?
+  // The date printed on the EBM receipt. It decides the VAT period.
+  receiptDate      DateTime?
+  voidReason       String?
+  notes            String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@unique([sdcId, receiptNumber])
+  @@index([status])
+  @@index([receiptDate])
+  @@index([leadId])
+}
+
+// Something Madar Hub bought. With the supplier's TIN and an EBM receipt
+// (receipt number and SDC ID) its VAT is claimable as input VAT; without them
+// it still counts as an expense for the annual income tax return.
+model Purchase {
+  id            String   @id @default(cuid())
+  supplierTin   String?
+  supplierName  String
+  description   String?
+  category      String
+  purchaseDate  DateTime
+  receiptNumber String?
+  sdcId         String?
+  // VAT-inclusive total and the VAT within it; 0 for an untaxed purchase.
+  totalAmount   Int
+  vatAmount     Int      @default(0)
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([purchaseDate])
 }
