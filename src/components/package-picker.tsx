@@ -10,7 +10,7 @@ import {
 } from "@/app/checkout-actions";
 import { PACKAGE_COPY, PACKAGE_ORDER } from "@/lib/package-copy";
 import { MOMO_MERCHANT_NAME, MOMO_USSD, WHATSAPP_NUMBER, WHATSAPP_URL } from "@/lib/site";
-import { checkoutAmounts, momoCheckoutAmounts, saleAmountWithVat } from "@/lib/pricing";
+import { checkoutAmounts, dpoCheckoutAmounts, momoCheckoutAmounts, saleAmountWithVat } from "@/lib/pricing";
 import { formatRwf } from "@/lib/utils";
 
 const initialState: CheckoutState = {};
@@ -155,6 +155,7 @@ export function PackagePicker({
   currentSlug,
   currentSubscriptionId = null,
   momoAvailable = false,
+  dpoAvailable = false,
 }: {
   packages: PickerPackage[];
   currentSlug?: string | null;
@@ -162,6 +163,8 @@ export function PackagePicker({
   currentSubscriptionId?: string | null;
   /** False while the CRM's MoMo credentials are missing or still on sandbox. */
   momoAvailable?: boolean;
+  /** False while the CRM's DPO account is missing or still in test mode. */
+  dpoAvailable?: boolean;
 }) {
   const [state, formAction, pending] = useActionState(startCheckout, initialState);
   const [submitting, setSubmitting] = useState<string | null>(null);
@@ -288,19 +291,37 @@ export function PackagePicker({
                   ) : null}
                   <button
                     type="submit"
-                    className={momoAvailable ? "button outline" : "button pesapal"}
+                    className={momoAvailable || dpoAvailable ? "button outline" : "button pesapal"}
                     disabled={busyAnywhere}
                     onClick={() => setSubmitting(pkg.slug)}
                   >
                     {busy && pending
                       ? "Opening payment…"
-                      : momoAvailable
-                        ? "Pay by card"
+                      : momoAvailable || dpoAvailable
+                        ? "Pay with Pesapal"
                         : isCurrent
                           ? "Renew Online"
                           : "Pay Online"}
                   </button>
                 </form>
+
+                {dpoAvailable ? (
+                  <form action={formAction}>
+                    <input type="hidden" name="packageSlug" value={pkg.slug} />
+                    <input type="hidden" name="provider" value="dpo" />
+                    {isCurrent && currentSubscriptionId ? (
+                      <input type="hidden" name="subscriptionId" value={currentSubscriptionId} />
+                    ) : null}
+                    <button
+                      type="submit"
+                      className="button outline"
+                      disabled={busyAnywhere}
+                      onClick={() => setSubmitting(pkg.slug)}
+                    >
+                      {busy && pending ? "Opening payment…" : "Pay with DPO"}
+                    </button>
+                  </form>
+                ) : null}
 
                 <a className="button whatsapp" href={whatsapp} target="_blank" rel="noopener">
                   Subscribe on WhatsApp
@@ -308,9 +329,14 @@ export function PackagePicker({
               </div>
 
               <p className="mp-plan-total">
-                {momoAvailable ? (
+                {momoAvailable || dpoAvailable ? (
                   <>
-                    {formatRwf(momoCheckoutAmounts(pkg.price).chargedAmount)} on MoMo &middot;{" "}
+                    {momoAvailable ? (
+                      <>{formatRwf(momoCheckoutAmounts(pkg.price).chargedAmount)} on MoMo &middot; </>
+                    ) : null}
+                    {dpoAvailable ? (
+                      <>{formatRwf(dpoCheckoutAmounts(pkg.price).chargedAmount)} with DPO &middot; </>
+                    ) : null}
                     {formatRwf(checkoutAmounts(pkg.price).chargedAmount)} by card
                   </>
                 ) : (
@@ -323,7 +349,13 @@ export function PackagePicker({
       </div>
 
       <p className="mp-hint" style={{ marginTop: 18 }}>
-        {momoAvailable ? (
+        {dpoAvailable ? (
+          <>
+            Every price includes 18% VAT. Paying with DPO Pay
+            {momoAvailable ? " or MTN MoMo" : ""} costs nothing extra. Paying by card through
+            Pesapal adds a 3% online payment fee. We never see your card details either way.
+          </>
+        ) : momoAvailable ? (
           <>
             Both prices include 18% VAT. Paying with MTN MoMo costs nothing extra &mdash; you
             approve a prompt on your phone. Paying by card, bank or another mobile money network

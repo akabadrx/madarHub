@@ -4,7 +4,7 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { PackagePicker } from "@/components/package-picker";
 import { SubscriptionList, type SubscriptionItem } from "@/components/subscription-list";
-import { isMomoAvailable } from "@/app/checkout-actions";
+import { isDpoAvailable, isMomoAvailable } from "@/app/checkout-actions";
 import { logout } from "@/app/auth-actions";
 import { linkAccountToLead } from "@/app/checkout-actions";
 import { getSessionUser } from "@/lib/session";
@@ -145,7 +145,7 @@ export default async function DashboardPage({
   const currentSlug = multiple
     ? null
     : (single?.packageSlug ?? packages.find((p) => p.name === currentPackage?.name)?.slug ?? null);
-  const momoAvailable = await isMomoAvailable();
+  const [momoAvailable, dpoAvailable] = await Promise.all([isMomoAvailable(), isDpoAvailable()]);
   const paymentDue = membership?.status === "Delayed Payment" || membership?.status === "Suspended";
   const firstName = user.fullName.split(" ")[0] || "there";
   const status = membership?.status ?? "No active plan";
@@ -275,7 +275,11 @@ export default async function DashboardPage({
                 <p className="mp-section-note">Each one renews on its own date</p>
               </div>
               {user.phone ? (
-                <SubscriptionList subscriptions={subscriptionItems} momoAvailable={momoAvailable} />
+                <SubscriptionList
+                  subscriptions={subscriptionItems}
+                  momoAvailable={momoAvailable}
+                  dpoAvailable={dpoAvailable}
+                />
               ) : (
                 <SubscriptionList
                   subscriptions={subscriptionItems.map((item) => ({ ...item, packageSlug: null }))}
@@ -308,6 +312,7 @@ export default async function DashboardPage({
                 currentSlug={currentSlug}
                 currentSubscriptionId={single?.id ?? null}
                 momoAvailable={momoAvailable}
+                dpoAvailable={dpoAvailable}
               />
             ) : (
               <div className="mp-due">
