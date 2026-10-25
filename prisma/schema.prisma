@@ -56,6 +56,7 @@ model Lead {
   interactions    Interaction[]
   pesapalPayments PesapalPayment[]
   momoPayments    MomoPayment[]
+  dpoPayments     DpoPayment[]
   portalInvites   PortalInvite[]
   reminderLogs    MemberReminderLog[]
   subscriptions   Subscription[]
@@ -119,6 +120,7 @@ model Package {
   payments         Payment[]
   pesapalPayments  PesapalPayment[]
   momoPayments     MomoPayment[]
+  dpoPayments      DpoPayment[]
   subscriptions    Subscription[]
   invoices         Invoice[]
 }
@@ -220,6 +222,51 @@ model MomoPayment {
   @@index([customerPhone])
 }
 
+// A DPO Pay checkout. DPO is a hosted redirect like Pesapal, but keyed by the
+// TransToken DPO mints, so it gets its own table rather than borrowing
+// PesapalPayment's tracking-id column — and the live Pesapal table is left
+// untouched while it is taking real payments.
+model DpoPayment {
+  id                String        @id @default(cuid())
+  // Sent to DPO as CompanyRef and echoed back on the redirect.
+  merchantReference String        @unique
+  // DPO's handle for the transaction: what the customer is sent to pay and
+  // what verifyToken is asked about. A row without one can never be resolved.
+  transToken        String?       @unique
+  transRef          String?
+  packageId         String?
+  package           Package?      @relation(fields: [packageId], references: [id])
+  packageName       String
+  // VAT-inclusive sale price, and what DPO billed. Equal today — the customer
+  // pays no DPO surcharge — but two columns so a future fee cannot change
+  // what the CRM books.
+  amount            Int
+  chargedAmount     Int?
+  currency          String        @default("RWF")
+  customerName      String
+  customerEmail     String
+  customerPhone     String?
+  status            String        @default("PENDING") // PENDING | COMPLETED | FAILED | ABANDONED
+  // "website" (public pricing page) or "membership" (signed-in portal member).
+  source            String        @default("website")
+  // The subscription a portal member chose to renew. Null for a public order,
+  // or a new purchase; fulfilment then decides where the payment belongs.
+  subscriptionId    String?
+  subscription      Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  // Created while DPO_MODE was "test": DPO's test cards move no money, so a
+  // COMPLETED test row is never real revenue, whatever it booked.
+  testMode          Boolean       @default(false)
+  // DPO's explanation for a decline, cancellation or expiry.
+  failureReason     String?
+  leadId            String?
+  lead              Lead?         @relation(fields: [leadId], references: [id])
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  @@index([status])
+  @@index([customerEmail])
+}
+
 // A one-time link staff send a member so they can create a portal account.
 // Most members arrive by WhatsApp or walk in, so the invite is what brings them
 // onto the portal; the token also guarantees the new account attaches to the
@@ -292,6 +339,7 @@ model Subscription {
   payments        Payment[]
   pesapalPayments PesapalPayment[]
   momoPayments    MomoPayment[]
+  dpoPayments     DpoPayment[]
   reminderLogs    MemberReminderLog[]
 
   @@index([leadId])

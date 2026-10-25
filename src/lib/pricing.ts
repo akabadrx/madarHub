@@ -43,3 +43,12 @@ export function momoCheckoutAmounts(packagePrice: number) {
   const amount = saleAmountWithVat(packagePrice);
   return { amount, chargedAmount: amount };
 }
+
+/**
+ * DPO Pay carries no surcharge: Madar Hub absorbs DPO's fee, so the customer
+ * is billed the VAT-inclusive sale price, as on MoMo.
+ */
+export function dpoCheckoutAmounts(packagePrice: number) {
+  const amount = saleAmountWithVat(packagePrice);
+  return { amount, chargedAmount: amount };
+}

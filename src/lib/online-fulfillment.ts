@@ -8,9 +8,9 @@ import { normalizePhone } from "@/lib/utils";
  * money: find or create the Lead, book a Payment against it, and leave an
  * interaction trail.
  *
- * Pesapal and MoMo differ only in how they learn a payment succeeded, not in
+ * Pesapal, MoMo and DPO differ only in how they learn a payment succeeded, not in
  * what a successful payment means to the CRM — keeping this in one place is
- * what stops the two channels from booking revenue differently.
+ * what stops the channels from booking revenue differently.
  *
  * Must be called inside a transaction: the Lead lookup, the Payment insert and
  * the running total are one unit, or a retried notification double-books.
@@ -28,7 +28,7 @@ export type OnlinePaymentInput = {
   packageName: string;
   /** VAT-inclusive sale price — what the CRM books, never the surcharged figure. */
   amount: number;
-  /** A value from PAYMENT_METHODS: "Pesapal" or "MoMo Pay". */
+  /** A value from PAYMENT_METHODS: "Pesapal", "MoMo Pay" or "DPO Pay". */
   paymentMethod: string;
   /** Human label for the provider, used in the note and interaction text. */
   providerLabel: string;

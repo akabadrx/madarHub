@@ -11,7 +11,8 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "dpo:check": "tsx scripts/dpo-check.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
