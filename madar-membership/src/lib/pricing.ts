@@ -33,3 +33,9 @@ export function momoCheckoutAmounts(packagePrice: number) {
   const amount = saleAmountWithVat(packagePrice);
   return { amount, chargedAmount: amount };
 }
+
+/** DPO Pay adds no surcharge: the member pays the VAT-inclusive sale price. */
+export function dpoCheckoutAmounts(packagePrice: number) {
+  const amount = saleAmountWithVat(packagePrice);
+  return { amount, chargedAmount: amount };
+}

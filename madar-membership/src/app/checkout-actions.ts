@@ -16,7 +16,8 @@ import { normalizePhone } from "@/lib/utils";
 export type CheckoutState = { error?: string };
 
 /**
- * Starts a Pesapal checkout for the signed-in member.
+ * Starts a hosted-page checkout — Pesapal, or DPO Pay when the form says
+ * provider=dpo — for the signed-in member.
  *
  * The member supplies only which package they want — and, when they pressed
  * Renew on one of their subscriptions, which one. Their name, phone, email
@@ -32,6 +33,9 @@ export async function startCheckout(_prev: CheckoutState, formData: FormData): P
   if (!packageSlug) return { error: "Choose a package first." };
   // The CRM checks this belongs to the member before it is used.
   const subscriptionId = String(formData.get("subscriptionId") ?? "").trim() || null;
+  // Anything but an explicit "dpo" stays on Pesapal, the channel that has
+  // always been there.
+  const provider = formData.get("provider") === "dpo" ? "dpo" : "pesapal";
 
   const pkg = await getPackageBySlug(packageSlug);
   if (!pkg) return { error: "That package is not available for online payment right now." };
@@ -57,7 +61,8 @@ export async function startCheckout(_prev: CheckoutState, formData: FormData): P
 
   let redirectUrl: string;
   try {
-    const response = await fetch(`${crmBaseUrl}/api/internal/checkout`, {
+    const path = provider === "dpo" ? "/api/internal/dpo/checkout" : "/api/internal/checkout";
+    const response = await fetch(`${crmBaseUrl}${path}`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${secret}` },
       body: JSON.stringify({
@@ -109,6 +114,25 @@ export async function isMomoAvailable(): Promise<boolean> {
     // Unreachable is treated as unavailable: showing a payment method we
     // cannot confirm works is worse than showing one fewer.
     console.error("[momo-availability]", error instanceof Error ? error.message : error);
+    return false;
+  }
+}
+
+/**
+ * Whether the portal should offer DPO Pay. As with MoMo, the CRM owns the
+ * credentials and answers false until DPO_MODE is "live" there.
+ */
+export async function isDpoAvailable(): Promise<boolean> {
+  const crmBaseUrl = process.env.CRM_BASE_URL || "https://madarorbit.com/crm";
+  try {
+    const response = await fetch(`${crmBaseUrl}/api/public/dpo/availability`, {
+      next: { revalidate: 60 },
+    });
+    if (!response.ok) return false;
+    const data = (await response.json().catch(() => ({}))) as { available?: boolean };
+    return data.available === true;
+  } catch (error) {
+    console.error("[dpo-availability]", error instanceof Error ? error.message : error);
     return false;
   }
 }

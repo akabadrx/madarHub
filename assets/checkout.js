@@ -6,6 +6,8 @@
   const MOMO_PATH = "/crm/api/public/momo/checkout";
   const MOMO_STATUS_PATH = "/crm/api/public/momo/status";
   const MOMO_AVAILABILITY_PATH = "/crm/api/public/momo/availability";
+  const DPO_PATH = "/crm/api/public/dpo/checkout";
+  const DPO_AVAILABILITY_PATH = "/crm/api/public/dpo/availability";
   const CANONICAL_ORIGIN = "https://madarorbit.com";
   const WHATSAPP_URL = "https://wa.me/250783662543";
   const REQUEST_TIMEOUT_MS = 45000;
@@ -33,7 +35,7 @@
   const apiUrl = (path) => (sameOrigin ? path : CANONICAL_ORIGIN + path);
 
   // Kept in step with the CRM's src/lib/pricing.ts. These figures are shown so
-  // the customer can see MoMo is the cheaper channel before choosing; the
+  // the customer can see which channels add a fee before choosing; the
   // server recalculates both from the package price, so nothing here can
   // change what is actually charged.
   const VAT_MULTIPLIER_PERCENT = 118;
@@ -71,6 +73,14 @@
               <span class="checkout-method-desc">Secure Pesapal page &mdash; adds a 3% fee</span>
             </span>
             <span class="checkout-method-amount" data-checkout-pesapal-total></span>
+          </label>
+          <label class="checkout-method" data-checkout-dpo-option hidden style="display: none">
+            <input type="radio" name="method" value="dpo" disabled />
+            <span class="checkout-method-body">
+              <span class="checkout-method-title">Card or mobile money via DPO <span class="checkout-method-tag">No extra fee</span></span>
+              <span class="checkout-method-desc">Secure DPO Pay page</span>
+            </span>
+            <span class="checkout-method-amount" data-checkout-dpo-total></span>
           </label>
         </fieldset>
 
@@ -120,6 +130,7 @@
   const priceEl = overlay.querySelector("[data-checkout-price]");
   const momoTotalEl = overlay.querySelector("[data-checkout-momo-total]");
   const pesapalTotalEl = overlay.querySelector("[data-checkout-pesapal-total]");
+  const dpoTotalEl = overlay.querySelector("[data-checkout-dpo-total]");
   const emailLabel = overlay.querySelector("[data-checkout-email-label]");
   const phoneLabel = overlay.querySelector("[data-checkout-phone-label]");
   const emailInput = form.querySelector('input[name="customerEmail"]');
@@ -134,67 +145,103 @@
   let pollTimer = null;
   let activeMomoAmount = 0;
 
-  // MoMo stays hidden until the server confirms it is live, so the option is
-  // never offered while the credentials are missing or still pointed at MTN's
-  // sandbox. Until the answer arrives the page behaves exactly as it did
-  // before MoMo existed: Pesapal only. Asked once on load rather than on first
-  // open, so the chooser is settled before anyone sees it.
+  // MoMo and DPO each stay hidden until the server confirms they are live, so
+  // neither is offered while its credentials are missing or still on a sandbox
+  // or test account. Until the answers arrive the page behaves exactly as it
+  // did before either existed: Pesapal only. Asked once on load rather than on
+  // first open, so the chooser is settled before anyone sees it.
   let momoAvailable = false;
+  let dpoAvailable = false;
   let availabilityChecked = false;
 
   const methodsFieldset = overlay.querySelector(".checkout-methods");
   const momoRadio = overlay.querySelector('input[name="method"][value="momo"]');
   const pesapalRadio = overlay.querySelector('input[name="method"][value="pesapal"]');
+  const dpoRadio = overlay.querySelector('input[name="method"][value="dpo"]');
+  const momoOption = momoRadio.closest(".checkout-method");
+  const dpoOption = overlay.querySelector("[data-checkout-dpo-option]");
 
   const selectedMethod = () =>
     overlay.querySelector('input[name="method"]:checked')?.value || "pesapal";
 
+  // .checkout-method is `display: grid`, which beats the [hidden] attribute,
+  // and the stylesheet is cached across pages. Hiding inline means a browser
+  // holding an older stylesheet still never shows a method that is off.
+  function showOption(option, radio, visible) {
+    option.hidden = !visible;
+    option.style.display = visible ? "" : "none";
+    radio.disabled = !visible;
+  }
+
   function applyAvailability() {
-    methodsFieldset.hidden = !momoAvailable;
-    if (!momoAvailable) {
-      pesapalRadio.checked = true;
-      momoRadio.disabled = true;
-    } else {
-      momoRadio.disabled = false;
+    methodsFieldset.hidden = !momoAvailable && !dpoAvailable;
+    showOption(momoOption, momoRadio, momoAvailable);
+    showOption(dpoOption, dpoRadio, dpoAvailable);
+    // Never leave a hidden method selected: fall back to MoMo when it is
+    // offered, otherwise to Pesapal, which is always there.
+    const current = overlay.querySelector('input[name="method"]:checked');
+    if (!current || current.disabled) {
+      (momoAvailable ? momoRadio : pesapalRadio).checked = true;
     }
     applyMethod();
+  }
+
+  async function isAvailable(path) {
+    try {
+      const res = await fetch(apiUrl(path), { headers: { Accept: "application/json" } });
+      const data = await res.json().catch(() => ({}));
+      return res.ok && data.available === true;
+    } catch {
+      // Unreachable is treated as unavailable: offering a method we cannot
+      // confirm works is worse than showing one fewer.
+      return false;
+    }
   }
 
   async function ensureAvailabilityChecked() {
     if (availabilityChecked) return;
     availabilityChecked = true;
-    try {
-      const res = await fetch(apiUrl(MOMO_AVAILABILITY_PATH), { headers: { Accept: "application/json" } });
-      const data = await res.json().catch(() => ({}));
-      momoAvailable = res.ok && data.available === true;
-    } catch {
-      // Unreachable is treated as unavailable: offering a method we cannot
-      // confirm works is worse than showing one fewer.
-      momoAvailable = false;
-    }
+    [momoAvailable, dpoAvailable] = await Promise.all([
+      isAvailable(MOMO_AVAILABILITY_PATH),
+      isAvailable(DPO_AVAILABILITY_PATH),
+    ]);
     applyAvailability();
   }
 
   /**
-   * MoMo needs a phone number and nothing else; Pesapal needs an email for its
-   * receipt. Asking for both on both channels would make the cheaper option
-   * feel like more work, so the email field is optional on MoMo.
+   * MoMo needs a phone number and nothing else; Pesapal and DPO need an email
+   * for their receipts. Asking for both on every channel would make the
+   * cheaper option feel like more work, so the email field is optional on MoMo.
    */
+  const METHOD_COPY = {
+    momo: {
+      submit: "Send MoMo Prompt",
+      fee: "MoMo adds no payment fee.",
+      vatExclusiveFee: "18% VAT is added to the amount charged. MoMo adds no payment fee.",
+    },
+    pesapal: {
+      submit: "Continue to Pesapal",
+      fee: "A 3% online payment fee is added on Pesapal's secure payment page.",
+      vatExclusiveFee: "18% VAT and a 3% online payment fee are added to the amount charged on Pesapal's secure payment page.",
+    },
+    dpo: {
+      submit: "Continue to DPO Pay",
+      fee: "DPO Pay adds no payment fee.",
+      vatExclusiveFee: "18% VAT is added to the amount charged. DPO Pay adds no payment fee.",
+    },
+  };
+
   function applyMethod() {
-    const momo = selectedMethod() === "momo";
-    submitBtn.textContent = momo ? "Send MoMo Prompt" : "Continue to Pesapal";
+    const method = selectedMethod();
+    const momo = method === "momo";
+    const copy = METHOD_COPY[method] || METHOD_COPY.pesapal;
+    submitBtn.textContent = copy.submit;
     phoneLabel.textContent = momo ? "MTN MoMo number" : "Phone number";
     emailLabel.textContent = momo ? "Email address (optional)" : "Email address";
     emailInput.required = !momo;
-    if (activeVatInclusive) {
-      noteEl.textContent = momo
-        ? "This price includes 18% VAT. MoMo adds no payment fee."
-        : "This price includes 18% VAT. A 3% online payment fee is added on Pesapal's secure payment page.";
-      return;
-    }
-    noteEl.textContent = momo
-      ? "Prices exclude VAT. 18% VAT is added to the amount charged. MoMo adds no payment fee."
-      : "Prices exclude VAT. 18% VAT and a 3% online payment fee are added to the amount charged on Pesapal's secure payment page.";
+    noteEl.textContent = activeVatInclusive
+      ? `This price includes 18% VAT. ${copy.fee}`
+      : `Prices exclude VAT. ${copy.vatExclusiveFee}`;
   }
 
   methodInputs.forEach((input) => input.addEventListener("change", applyMethod));
@@ -215,9 +262,11 @@
       const saleAmount = activeVatInclusive ? labelPrice : withVat(labelPrice);
       momoTotalEl.textContent = formatRwf(saleAmount);
       pesapalTotalEl.textContent = formatRwf(withPesapalFee(saleAmount));
+      dpoTotalEl.textContent = formatRwf(saleAmount);
     } else {
       momoTotalEl.textContent = "";
       pesapalTotalEl.textContent = "";
+      dpoTotalEl.textContent = "";
     }
 
     errorEl.hidden = true;
@@ -305,7 +354,8 @@
     submitBtn.textContent = method === "momo" ? "Sending prompt…" : "Redirecting…";
 
     try {
-      const data = await postJson(method === "momo" ? MOMO_PATH : PESAPAL_PATH, payload);
+      const path = method === "momo" ? MOMO_PATH : method === "dpo" ? DPO_PATH : PESAPAL_PATH;
+      const data = await postJson(path, payload);
 
       if (method === "momo") {
         if (!data.reference) throw new Error(data.error || "Could not start the MoMo payment. Please try again.");

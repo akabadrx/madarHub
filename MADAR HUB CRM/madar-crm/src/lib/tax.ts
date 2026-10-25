@@ -30,12 +30,13 @@ export function vatFromInclusive(totalInclusive: number): number {
 
 /**
  * How the buyer paid, as the invoice records it, and the payment type to pick
- * in EBM. Pesapal settles to the bank account, so it is a bank transfer.
+ * in EBM. Pesapal and DPO Pay settle to the bank account, so they are bank
+ * transfers.
  * Check `ebm` against the payment types your EBM version lists and adjust
  * here if they differ.
  */
 export const INVOICE_PAYMENT_METHODS = [
-  { value: "bank_transfer", label: "Bank slip / transfer (incl. Pesapal)", ebm: "OTHER (bank transfer)" },
+  { value: "bank_transfer", label: "Bank slip / transfer (incl. Pesapal, DPO)", ebm: "OTHER (bank transfer)" },
   { value: "mobile_money", label: "Mobile transfer (MoMo)", ebm: "MOBILE MONEY" },
   { value: "bank_cheque", label: "Bank cheque deposit", ebm: "BANK CHECK" },
 ] as const;
@@ -49,7 +50,7 @@ export function invoicePaymentMethod(value: string) {
 /** The invoice payment type implied by how a CRM payment was recorded. */
 export function invoiceMethodForPayment(paymentMethod: string): InvoicePaymentMethod | "" {
   if (paymentMethod === "MoMo Pay") return "mobile_money";
-  if (paymentMethod === "Pesapal" || paymentMethod === "Bank Transfer") return "bank_transfer";
+  if (paymentMethod === "Pesapal" || paymentMethod === "DPO Pay" || paymentMethod === "Bank Transfer") return "bank_transfer";
   return "";
 }
 

@@ -36,9 +36,11 @@ const BADGE_CLASS: Record<string, string> = {
 export function SubscriptionList({
   subscriptions,
   momoAvailable = false,
+  dpoAvailable = false,
 }: {
   subscriptions: SubscriptionItem[];
   momoAvailable?: boolean;
+  dpoAvailable?: boolean;
 }) {
   const [state, formAction, pending] = useActionState(startCheckout, initialState);
   const [submitting, setSubmitting] = useState<string | null>(null);
@@ -96,13 +98,32 @@ export function SubscriptionList({
                       <input type="hidden" name="subscriptionId" value={sub.id} />
                       <button
                         type="submit"
-                        className={momoAvailable ? "button outline" : "button pesapal"}
+                        className={momoAvailable || dpoAvailable ? "button outline" : "button pesapal"}
                         disabled={busyAnywhere}
                         onClick={() => setSubmitting(sub.id)}
                       >
-                        {busy && pending ? "Opening payment…" : momoAvailable ? "Pay by card" : "Renew Online"}
+                        {busy && pending
+                          ? "Opening payment…"
+                          : momoAvailable || dpoAvailable
+                            ? "Pay with Pesapal"
+                            : "Renew Online"}
                       </button>
                     </form>
+                    {dpoAvailable ? (
+                      <form action={formAction}>
+                        <input type="hidden" name="packageSlug" value={sub.packageSlug} />
+                        <input type="hidden" name="subscriptionId" value={sub.id} />
+                        <input type="hidden" name="provider" value="dpo" />
+                        <button
+                          type="submit"
+                          className="button outline"
+                          disabled={busyAnywhere}
+                          onClick={() => setSubmitting(sub.id)}
+                        >
+                          {busy && pending ? "Opening payment…" : "Renew with DPO"}
+                        </button>
+                      </form>
+                    ) : null}
                   </>
                 ) : (
                   <a className="button whatsapp" href={whatsapp} target="_blank" rel="noopener">
