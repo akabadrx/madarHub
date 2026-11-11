@@ -1,5 +1,7 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/session";
 import {
@@ -89,6 +91,53 @@ export async function startCheckout(_prev: CheckoutState, formData: FormData): P
 
   // redirect() throws, so it must sit outside the try block above.
   redirect(redirectUrl);
+}
+
+/**
+ * The member ticks "I have read and agree" — to take up the Loyalty Rate, or
+ * to accept the terms of a committed price staff set for them.
+ *
+ * The CRM checks eligibility again and stores the consent with the member,
+ * the version of the terms they were shown and their IP address. With pay=1
+ * the payment then starts straight away, as any renewal would.
+ */
+export async function acceptTerms(prev: CheckoutState, formData: FormData): Promise<CheckoutState> {
+  const user = await getSessionUser();
+  if (!user) redirect("/login");
+  if (!user.leadId) return { error: "Your account is not connected to a membership yet." };
+  if (formData.get("agree") !== "on") return { error: "Tick the box to agree to the terms first." };
+
+  const subscriptionId = String(formData.get("subscriptionId") ?? "").trim();
+  const termsVersion = String(formData.get("termsVersion") ?? "").trim();
+  if (!subscriptionId || !termsVersion) return { error: "Reload the page and try again." };
+
+  const secret = process.env.INTERNAL_API_SECRET;
+  const crmBaseUrl = process.env.CRM_BASE_URL || "https://madarorbit.com/crm";
+  if (!secret) return { error: "Online payment is not set up yet. Please contact us on WhatsApp." };
+
+  const requestHeaders = await headers();
+  const ipAddress =
+    requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() || requestHeaders.get("x-real-ip") || null;
+
+  try {
+    const response = await fetch(`${crmBaseUrl}/api/internal/billing/accept`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${secret}` },
+      body: JSON.stringify({ leadId: user.leadId, subscriptionId, portalUserId: user.id, termsVersion, ipAddress }),
+      cache: "no-store",
+    });
+    if (!response.ok) {
+      const data = (await response.json().catch(() => ({}))) as { error?: string };
+      return { error: data.error || "Something went wrong. Please try again." };
+    }
+  } catch (error) {
+    console.error("[accept-terms]", error instanceof Error ? error.message : error);
+    return { error: "Could not reach the membership service. Please try again in a moment." };
+  }
+
+  if (formData.get("pay") === "1") return startCheckout(prev, formData);
+  revalidatePath("/");
+  redirect("/?offer=accepted");
 }
 
 /**

@@ -682,3 +682,14 @@
   .mp-plan { transition: none; }
   .mp-plan:hover { transform: none; }
 }
+
+/* ---- Loyalty offer and commitment terms ---- */
+
+.mp-terms { flex: 1 1 100%; display: grid; gap: 8px; margin-top: 10px; }
+.mp-terms p { margin: 0; font-size: 0.85rem; line-height: 1.55; color: var(--dark-text); }
+.mp-agree { display: grid; gap: 10px; width: 100%; flex: 1 1 100%; }
+.mp-agree .button { width: 100%; }
+.mp-agree .button:disabled { opacity: 0.55; cursor: not-allowed; }
+.mp-agree-check { display: flex; gap: 10px; align-items: flex-start; font-size: 0.85rem; line-height: 1.45; color: var(--dark-text); text-align: left; }
+.mp-agree-check input { margin-top: 3px; accent-color: var(--gold-dark); }
+.mp-commitment { margin: 14px 0 0; font-size: 0.88rem; line-height: 1.5; opacity: 0.9; }

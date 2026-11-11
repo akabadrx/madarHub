@@ -4,6 +4,8 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { PackagePicker } from "@/components/package-picker";
 import { SubscriptionList, type SubscriptionItem } from "@/components/subscription-list";
+import { LoyaltyOffer, TermsToAccept } from "@/components/loyalty-offer";
+import { getMemberBilling } from "@/lib/billing";
 import { isDpoAvailable, isMomoAvailable } from "@/app/checkout-actions";
 import { logout } from "@/app/auth-actions";
 import { linkAccountToLead } from "@/app/checkout-actions";
@@ -66,7 +68,7 @@ function subscriptionStatus(sub: CrmSubscription): MembershipPaymentInfo | null 
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ payment?: string }>;
+  searchParams: Promise<{ payment?: string; offer?: string }>;
 }) {
   const user = await getSessionUser();
   if (!user) redirect("/login");
@@ -77,21 +79,33 @@ export default async function DashboardPage({
   const leadId = user.leadId ?? (await linkAccountToLead(user.id, user.email, user.phone));
 
   const params = await searchParams;
-  const notice = params.payment ? PAYMENT_NOTICE[params.payment] : undefined;
+  const notice = params.payment
+    ? PAYMENT_NOTICE[params.payment]
+    : params.offer === "accepted"
+      ? { tone: "success", text: "Thank you, your new terms are recorded. Your new price applies from your next payment." }
+      : undefined;
 
   const lead = leadId ? await getLead(leadId) : null;
 
-  const [payments, subscriptions, packages] = await Promise.all([
+  const [payments, subscriptions, packages, billing] = await Promise.all([
     lead ? getPayments(lead.id) : Promise.resolve([]),
     lead ? getSubscriptions(lead.id) : Promise.resolve([]),
     getActivePackages(),
+    lead ? getMemberBilling(lead.id) : Promise.resolve(null),
   ]);
+  // Custom and Loyalty prices, by subscription. The CRM works out the amount
+  // due with the custom price in it, so it replaces the standard figure.
+  const priced = new Map((billing?.subscriptions ?? []).map((b) => [b.subscriptionId, b]));
+  const withPrice = (sub: CrmSubscription, info: MembershipPaymentInfo | null) => {
+    const b = priced.get(sub.id);
+    return info && b && info.dueAmount > 0 ? { ...info, dueAmount: b.dueAmount } : info;
+  };
 
   // A member can hold several subscriptions — one per business — each due on
   // its own date. With one, the page reads exactly as a single membership did.
   const multiple = subscriptions.length > 1;
   const single = subscriptions.length === 1 ? subscriptions[0] : null;
-  const statuses = subscriptions.map((sub) => ({ sub, info: subscriptionStatus(sub) }));
+  const statuses = subscriptions.map((sub) => ({ sub, info: withPrice(sub, subscriptionStatus(sub)) }));
 
   // Someone with no subscription on record yet is billed lead-wide, as before.
   const currentPackage = single
@@ -113,9 +127,11 @@ export default async function DashboardPage({
             SEVERITY[a.status] - SEVERITY[b.status] ||
             a.nextPaymentDate.getTime() - b.nextPaymentDate.getTime(),
         )[0] ?? null)
-    : lead
-      ? getMembershipPaymentStatus(currentPackage, lastPayment?.paymentDate ?? null, lastPayment?.amount ?? 0)
-      : null;
+    : single
+      ? statuses[0].info
+      : lead
+        ? getMembershipPaymentStatus(currentPackage, lastPayment?.paymentDate ?? null, lastPayment?.amount ?? 0)
+        : null;
 
   const dueCount = statuses.filter(({ info }) => info && info.status !== "Active").length;
   const totalDue = statuses.reduce((sum, { info }) => sum + (info?.dueAmount ?? 0), 0);
@@ -149,7 +165,17 @@ export default async function DashboardPage({
   const paymentDue = membership?.status === "Delayed Payment" || membership?.status === "Suspended";
   const firstName = user.fullName.split(" ")[0] || "there";
   const status = membership?.status ?? "No active plan";
-  const planAmount = currentPackage?.price ?? lastPayment?.amount ?? 0;
+  const singleOverride = single ? priced.get(single.id)?.override : undefined;
+  const planAmount = singleOverride?.monthlyTotal ?? currentPackage?.price ?? lastPayment?.amount ?? 0;
+  const subName = (sub: CrmSubscription) => sub.label?.trim() || sub.packageName || "Membership";
+  const commitments = subscriptions.flatMap((sub) => {
+    const o = priced.get(sub.id)?.override;
+    return o?.commitmentMonths ? [{ sub, o }] : [];
+  });
+  const termsPending = subscriptions.flatMap((sub) => {
+    const o = priced.get(sub.id)?.override;
+    return o?.commitmentMonths && !o.termsAccepted && o.terms && o.termsVersion ? [{ sub, o }] : [];
+  });
   // A plan with no package is billed monthly, like the status above assumes.
   const periodMonths = currentPackage ? billingPeriodMonths(currentPackage.billingType) : 1;
   const planCadence = periodMonths === 1 ? " per month" : periodMonths ? ` per ${periodMonths} months` : "";
@@ -237,7 +263,14 @@ export default async function DashboardPage({
                 <dt>Plan</dt>
                 <dd>
                   {currentPackage?.name ?? lead?.interest ?? "Not set"}
-                  {planAmount > 0 ? <small>{formatRwf(planAmount)}{planCadence}</small> : null}
+                  {singleOverride ? (singleOverride.kind === "loyalty" ? " — Loyalty Rate" : " — custom rate") : null}
+                  {planAmount > 0 ? (
+                    <small>
+                      {formatRwf(planAmount)}
+                      {planCadence}
+                      {singleOverride ? ", VAT inclusive" : ""}
+                    </small>
+                  ) : null}
                 </dd>
               </div>
               <div className="mp-figure">
@@ -266,7 +299,48 @@ export default async function DashboardPage({
               </div>
             </dl>
             )}
+
+            {commitments.map(({ sub, o }) => (
+              <p className="mp-commitment" key={sub.id}>
+                {multiple ? <strong>{subName(sub)}: </strong> : null}
+                {o.monthsPaid > 0 && o.endDate
+                  ? `Commitment: month ${Math.min(o.monthsPaid, o.commitmentMonths ?? 0)} of ${o.commitmentMonths}, ends ${formatDate(o.endDate)}.`
+                  : `Commitment: ${o.commitmentMonths} months, starting with your first payment at this rate.`}{" "}
+                {o.complete ? "Completed." : `If you cancel today: penalty = ${formatRwf(o.penaltyIfCancelledToday)}.`}
+              </p>
+            ))}
           </section>
+
+          {billing && billing.unpaidPenalty > 0 ? (
+            <p className="mp-alert error" role="alert" style={{ marginBottom: 20 }}>
+              An early-termination balance of {formatRwf(billing.unpaidPenalty)} is unpaid. Please settle it with
+              Madar Hub before buying a new plan.
+            </p>
+          ) : null}
+
+          {termsPending.map(({ sub, o }) => (
+            <TermsToAccept
+              key={sub.id}
+              subscriptionId={sub.id}
+              name={subName(sub)}
+              monthlyTotal={o.monthlyTotal}
+              commitmentMonths={o.commitmentMonths ?? 0}
+              terms={o.terms ?? ""}
+              termsVersion={o.termsVersion ?? ""}
+            />
+          ))}
+
+          {billing?.loyaltyOffer && user.phone ? (
+            <section className="mp-section" aria-label="Member offer">
+              <div className="mp-section-head">
+                <h2>A member offer for you</h2>
+                <p className="mp-section-note">Thanks for staying with us</p>
+              </div>
+              <LoyaltyOffer
+                offer={{ ...billing.loyaltyOffer, startsOnText: formatDate(billing.loyaltyOffer.startsOn) }}
+              />
+            </section>
+          ) : null}
 
           {multiple ? (
             <section className="mp-section" aria-label="Your subscriptions">
@@ -311,6 +385,7 @@ export default async function DashboardPage({
                 packages={packages}
                 currentSlug={currentSlug}
                 currentSubscriptionId={single?.id ?? null}
+                currentSaleAmount={singleOverride?.applies ? singleOverride.monthlyTotal : null}
                 momoAvailable={momoAvailable}
                 dpoAvailable={dpoAvailable}
               />
