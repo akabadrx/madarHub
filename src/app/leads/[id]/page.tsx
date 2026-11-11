@@ -12,27 +12,33 @@ import { VisitForm } from "@/components/visit-form";
 import { ConversationReply } from "@/components/conversation-reply";
 import { MovePaymentSelect } from "@/components/move-payment-select";
 import { SubscriptionsPanel, type PanelSubscription } from "@/components/subscriptions-panel";
+import { BillingPanel, type BillingRow } from "@/components/billing-panel";
+import { describeBilling } from "@/lib/billing";
 import { getDb } from "@/lib/db";
-import { getSubscriptionPaymentStatus, subscriptionName } from "@/lib/subscriptions";
+import { subscriptionName } from "@/lib/subscriptions";
 import { formatDate, formatRwf, leadDisplayName, whatsappUrl } from "@/lib/utils";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) { const { id } = await params; const lead = await getDb().lead.findUnique({ where: { id }, select: { name: true, phone: true } }); return { title: lead ? leadDisplayName(lead.name, lead.phone) : "Lead" }; }
 
 export default async function LeadDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params; const db = getDb();
-  const [lead, packages, templates] = await Promise.all([
-    db.lead.findUnique({ where: { id }, include: { suggestedPackage: true, payments: { include: { package: true }, orderBy: { paymentDate: "desc" } }, visits: { orderBy: { visitDate: "desc" } }, interactions: { orderBy: { createdAt: "desc" } }, subscriptions: { include: { package: true }, orderBy: { createdAt: "asc" } } } }),
+  const [lead, packages, templates, auditLogs] = await Promise.all([
+    db.lead.findUnique({ where: { id }, include: { suggestedPackage: true, payments: { include: { package: true }, orderBy: { paymentDate: "desc" } }, visits: { orderBy: { visitDate: "desc" } }, interactions: { orderBy: { createdAt: "desc" } }, subscriptions: { include: { package: true, priceOverride: true, termsAcceptances: { select: { termsVersion: true } } }, orderBy: { createdAt: "asc" } } } }),
     db.package.findMany({ where: { active: true }, orderBy: { price: "asc" }, select: { id: true, name: true, price: true } }),
     db.messageTemplate.findMany({ orderBy: { title: "asc" } }),
+    db.billingAuditLog.findMany({ where: { leadId: id }, orderBy: { createdAt: "desc" }, take: 50 }),
   ]);
   if (!lead) notFound();
   const name = leadDisplayName(lead.name, lead.phone);
   const option = [{ id: lead.id, name }];
   const aiBadge = lead.aiConfidence != null ? Math.round(lead.aiConfidence * 100) : null;
   // Payments arrive newest first, so the first one per subscription is its latest.
+  const billingRows: BillingRow[] = [];
   const subscriptions: PanelSubscription[] = lead.subscriptions.map((sub) => {
     const paid = lead.payments.filter((payment) => payment.subscriptionId === sub.id);
-    return { id: sub.id, name: subscriptionName(sub), label: sub.label, packageId: sub.packageId, packageName: sub.package?.name ?? null, status: sub.status, startDate: sub.startDate, notes: sub.notes, lastPaymentDate: paid[0]?.paymentDate ?? null, totalPaid: paid.reduce((sum, payment) => sum + payment.amount, 0), info: sub.status === "active" ? getSubscriptionPaymentStatus(sub, paid[0]) : null };
+    const billing = describeBilling(sub, paid, sub.termsAcceptances.map((a) => a.termsVersion));
+    if (sub.status === "active" || sub.terminatedAt) billingRows.push({ id: sub.id, name: subscriptionName(sub), status: sub.status, terminatedAt: sub.terminatedAt, penaltyAmount: sub.penaltyAmount, penaltyPaidAt: sub.penaltyPaidAt, billing: { subscriptionId: sub.id, packageId: sub.packageId, ...billing } });
+    return { id: sub.id, name: subscriptionName(sub), label: sub.label, packageId: sub.packageId, packageName: sub.package?.name ?? null, status: sub.status, startDate: sub.startDate, notes: sub.notes, lastPaymentDate: paid[0]?.paymentDate ?? null, totalPaid: paid.reduce((sum, payment) => sum + payment.amount, 0), info: sub.status === "active" ? billing.info : null };
   });
   const subscriptionNames = new Map(subscriptions.map((sub) => [sub.id, sub.name]));
   const subscriptionOptions = subscriptions.filter((sub) => sub.status === "active").map((sub) => ({ id: sub.id, name: sub.name, leadId: lead.id }));
@@ -62,6 +68,7 @@ export default async function LeadDetailPage({ params }: { params: Promise<{ id:
           {lead.notes && <div className="mt-4 rounded-xl border border-[#eadcae] bg-[#fffaf0] p-4 text-sm leading-6"><strong className="block text-[#76570b]">Staff notes</strong>{lead.notes}</div>}
         </section>
         <SubscriptionsPanel leadId={lead.id} subscriptions={subscriptions} packages={packages} />
+        <BillingPanel rows={billingRows} audit={auditLogs.map((row) => ({ ...row, subscriptionName: (row.subscriptionId && subscriptionNames.get(row.subscriptionId)) || null }))} />
         <section className="card p-5"><h2 className="mb-4 font-bold text-[#0b1f3a]">Conversation timeline and notes</h2><NoteForm leadId={lead.id} /><div className="mt-5 space-y-3">{lead.interactions.map((item) => { const inbound = item.type === "whatsapp-in"; const outbound = item.type === "whatsapp-out"; const draft = item.type === "ai-draft"; return <div className={`flex gap-3 rounded-xl p-3 ${inbound ? "bg-blue-50" : outbound ? "bg-green-50" : draft ? "bg-amber-50" : ""}`} key={item.id}><div className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${inbound ? "bg-blue-500" : outbound ? "bg-green-500" : draft ? "bg-amber-400" : "bg-[#d4a72c]"}`} /><div className="min-w-0"><p className="whitespace-pre-line break-words text-sm leading-6 text-slate-700">{item.content}</p><p className="mt-1 text-xs text-slate-400">{inbound ? "Customer message" : outbound ? "Madar Hub sent" : draft ? "AI draft" : item.type} · {formatDate(item.createdAt, true)}</p></div></div>; })}{lead.interactions.length === 0 && <p className="text-sm text-slate-500">No interactions recorded yet.</p>}</div>{lead.rawWhatsappSnippet && <details className="mt-4"><summary className="cursor-pointer text-xs font-semibold text-slate-400 hover:text-slate-600">Initial WhatsApp transcript</summary><div className="mt-2 whitespace-pre-line rounded-xl bg-slate-50 p-4 text-xs leading-5 text-slate-500">{lead.rawWhatsappSnippet}</div></details>}</section>
         <section className="card p-5"><h2 className="mb-4 font-bold text-[#0b1f3a]">Visit history</h2><VisitForm leads={option} defaultLeadId={lead.id} /><div className="mt-5 table-wrap"><table className="data-table"><thead><tr><th>Date</th><th>Status</th><th>Notes</th></tr></thead><tbody>{lead.visits.map((visit) => <tr key={visit.id}><td>{formatDate(visit.visitDate, true)}</td><td><StatusBadge status={visit.status} /></td><td>{visit.notes || "—"}</td></tr>)}</tbody></table></div></section>
         <section className="card p-5"><h2 className="mb-4 font-bold text-[#0b1f3a]">Payment history</h2><PaymentForm leads={option} packages={packages} subscriptions={subscriptionOptions} defaultLeadId={lead.id} /><div className="mt-5 table-wrap"><table className="data-table"><thead><tr><th>Date</th><th>Package</th><th>Subscription</th><th>Method</th><th>Amount</th></tr></thead><tbody>{lead.payments.map((payment) => <tr key={payment.id}><td>{formatDate(payment.paymentDate)}</td><td>{payment.package?.name || "Unassigned"}</td><td>{subscriptions.length > 0 ? <MovePaymentSelect paymentId={payment.id} value={payment.subscriptionId} subscriptions={subscriptions.map((sub) => ({ id: sub.id, name: sub.status === "active" ? sub.name : `${sub.name} (cancelled)` }))} /> : (payment.subscriptionId && subscriptionNames.get(payment.subscriptionId)) || "—"}</td><td>{payment.paymentMethod}</td><td className="font-semibold">{formatRwf(payment.amount)}</td></tr>)}</tbody></table></div></section>

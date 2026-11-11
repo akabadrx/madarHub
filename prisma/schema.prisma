@@ -333,14 +333,23 @@ model Subscription {
   startDate   DateTime  @default(now())
   cancelledAt DateTime?
   notes       String?
+  // Set when a subscription with a price commitment ends early. The penalty
+  // is what the member owes (see src/lib/billing.ts); while it is unpaid the
+  // portal refuses every new purchase.
+  terminatedAt  DateTime?
+  penaltyAmount Int?
+  penaltyPaidAt DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  payments        Payment[]
-  pesapalPayments PesapalPayment[]
-  momoPayments    MomoPayment[]
-  dpoPayments     DpoPayment[]
-  reminderLogs    MemberReminderLog[]
+  payments         Payment[]
+  pesapalPayments  PesapalPayment[]
+  momoPayments     MomoPayment[]
+  dpoPayments      DpoPayment[]
+  reminderLogs     MemberReminderLog[]
+  priceOverride    PriceOverride?
+  termsAcceptances TermsAcceptance[]
+  billingAuditLogs BillingAuditLog[]
 
   @@index([leadId])
   @@index([status])
@@ -421,4 +430,62 @@ model Purchase {
   updatedAt     DateTime @updatedAt
 
   @@index([purchaseDate])
+}
+
+// A custom monthly price for one subscription, replacing its plan's price in
+// every checkout, reminder and receipt until staff change or remove it. The
+// Loyalty Rate is one of these with kind "loyalty"; see src/lib/billing.ts.
+model PriceOverride {
+  id               String       @id @default(cuid())
+  subscriptionId   String       @unique
+  subscription     Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  // "loyalty" (the standard Loyalty Rate) | "custom"
+  kind             String       @default("custom")
+  amount           Int
+  // True: amount is the all-in monthly total. False: 18% VAT is added to it.
+  vatInclusive     Boolean      @default(true)
+  // Applies to the billing cycle that starts on or after this date.
+  effectiveFrom    DateTime
+  // Null for no commitment; otherwise 6 or 12 months.
+  commitmentMonths Int?
+  // The customer-facing terms and a hash of them. The member must accept this
+  // exact version before a committed price can be paid.
+  terms            String?
+  termsVersion     String?
+  note             String?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+}
+
+// A member's acceptance of a subscription's price terms: our record of consent.
+model TermsAcceptance {
+  id             String       @id @default(cuid())
+  subscriptionId String
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  leadId         String
+  // The portal's MembershipUser id. The portal owns that table, so no FK.
+  portalUserId   String
+  termsVersion   String
+  ipAddress      String?
+  acceptedAt     DateTime     @default(now())
+
+  @@index([subscriptionId, termsVersion])
+}
+
+// Every change to a subscription's price, commitment or termination.
+model BillingAuditLog {
+  id             String        @id @default(cuid())
+  leadId         String
+  subscriptionId String?
+  subscription   Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  // "override_set" | "override_removed" | "loyalty_accepted" | "terminated" | "penalty_paid"
+  action         String
+  // The CRM has one shared login, so staff type their name on the form.
+  changedBy      String
+  oldAmount      Int?
+  newAmount      Int?
+  note           String?
+  createdAt      DateTime      @default(now())
+
+  @@index([leadId, createdAt])
 }

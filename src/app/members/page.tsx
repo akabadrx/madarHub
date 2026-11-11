@@ -7,7 +7,8 @@ import { ACTIVE_MEMBER_STATUSES } from "@/lib/constants";
 import { getDb } from "@/lib/db";
 import type { MembershipPaymentInfo } from "@/lib/membership";
 import { netRevenueAmount } from "@/lib/revenue";
-import { getSubscriptionPaymentStatus, subscriptionName } from "@/lib/subscriptions";
+import { subscriptionName } from "@/lib/subscriptions";
+import { describeBilling } from "@/lib/billing";
 import { formatDate, formatRwf, leadDisplayName, whatsappUrl } from "@/lib/utils";
 
 export const metadata = { title: "Active Members" };
@@ -33,7 +34,9 @@ export default async function MembersPage({
       where: { status: "active", lead: memberWhere },
       include: {
         package: true,
-        payments: { orderBy: { paymentDate: "desc" }, take: 1 },
+        priceOverride: true,
+        termsAcceptances: { select: { termsVersion: true } },
+        payments: { orderBy: { paymentDate: "desc" }, select: { paymentDate: true, amount: true, packageId: true } },
       },
       orderBy: { createdAt: "asc" },
     }),
@@ -66,23 +69,28 @@ export default async function MembersPage({
     plan: string | null;
     lastPaymentDate: Date | null;
     info: MembershipPaymentInfo | null;
+    customPrice: number | null;
   };
   const subscriptionsByLead = new Map<string, typeof subscriptions>();
   subscriptions.forEach((sub) => subscriptionsByLead.set(sub.leadId, [...(subscriptionsByLead.get(sub.leadId) ?? []), sub]));
   const allRows: Row[] = activeMembers.flatMap((member): Row[] => {
     const subs = subscriptionsByLead.get(member.id) ?? [];
     if (subs.length === 0) {
-      return [{ key: member.id, member, subscriptionId: null, name: null, plan: member.suggestedPackage?.name || member.interest, lastPaymentDate: null, info: null }];
+      return [{ key: member.id, member, subscriptionId: null, name: null, plan: member.suggestedPackage?.name || member.interest, lastPaymentDate: null, info: null, customPrice: null }];
     }
-    return subs.map((sub) => ({
+    return subs.map((sub) => {
+      const billing = describeBilling(sub, sub.payments, sub.termsAcceptances.map((a) => a.termsVersion), now);
+      return {
       key: sub.id,
       member,
       subscriptionId: sub.id,
       name: sub.label ? subscriptionName(sub) : null,
       plan: sub.package?.name ?? "Custom amount",
       lastPaymentDate: sub.payments[0]?.paymentDate ?? null,
-      info: getSubscriptionPaymentStatus(sub, sub.payments[0], now),
-    }));
+      info: billing.info,
+      customPrice: billing.override?.monthlyTotal ?? null,
+    };
+    });
   });
 
   const normalizedQuery = q?.toLocaleLowerCase();
@@ -168,7 +176,7 @@ export default async function MembersPage({
               <tr><th>Member</th><th>Plan</th><th>Status</th><th>Last payment</th><th>Next payment</th><th>Payment status</th><th>Portal</th><th>This month</th><th>Total paid</th><th>Actions</th></tr>
             </thead>
             <tbody>
-              {rows.map(({ key, member, subscriptionId, name, plan, lastPaymentDate, info: membershipInfo }) => {
+              {rows.map(({ key, member, subscriptionId, name, plan, lastPaymentDate, info: membershipInfo, customPrice }) => {
                 return (
                   <tr key={key}>
                     <td>
@@ -178,7 +186,12 @@ export default async function MembersPage({
                       {name && <p className="mt-1 text-xs font-semibold text-[#9a7110]">{name}</p>}
                       <p className="mt-1 text-xs text-slate-500">{member.phone}</p>
                     </td>
-                    <td>{subscriptionId ? plan : <span className="text-slate-500">{plan || "No subscription yet"}</span>}</td>
+                    <td>
+                      {subscriptionId ? plan : <span className="text-slate-500">{plan || "No subscription yet"}</span>}
+                      {customPrice !== null && (
+                        <p className="mt-1"><span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-800 ring-1 ring-amber-200">Custom price: {customPrice.toLocaleString("en-RW")}</span></p>
+                      )}
+                    </td>
                     <td><StatusBadge status={member.status} /></td>
                     <td>{formatDate(lastPaymentDate)}</td>
                     <td>{membershipInfo ? formatDate(membershipInfo.nextPaymentDate) : "—"}</td>

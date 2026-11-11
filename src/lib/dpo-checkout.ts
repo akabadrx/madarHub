@@ -17,6 +17,8 @@ export async function startDpoCheckout(input: {
   source: "website" | "membership";
   leadId?: string | null;
   subscriptionId?: string | null;
+  /** VAT-inclusive price already settled by the caller (a portal custom price); else the package's. */
+  saleAmount?: number;
 }) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL;
   if (!appUrl) throw new Error("[DPO] Missing NEXT_PUBLIC_APP_URL");
@@ -24,7 +26,9 @@ export async function startDpoCheckout(input: {
   const db = getDb();
   const prefix = input.source === "membership" ? "MHMDPO" : "MHDPO";
   const merchantReference = `${prefix}-${Date.now()}-${randomBytes(3).toString("hex")}`;
-  const { amount, chargedAmount } = dpoCheckoutAmounts(input.pkg.price);
+  const { amount, chargedAmount } = input.saleAmount
+    ? { amount: input.saleAmount, chargedAmount: input.saleAmount }
+    : dpoCheckoutAmounts(input.pkg.price);
 
   // The row is written before DPO is called so a token that is created but
   // whose response never reaches us still leaves a trace.

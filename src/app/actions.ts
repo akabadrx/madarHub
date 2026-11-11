@@ -8,6 +8,7 @@ import { leadSchema, paymentSchema, subscriptionSchema, visitSchema } from "@/li
 import { VISIT_STATUSES } from "@/lib/constants";
 import { isRecurringBillingType } from "@/lib/membership";
 import { AmbiguousSubscriptionError, resolvePaymentSubscription, subscriptionName } from "@/lib/subscriptions";
+import { terminateSubscription } from "@/lib/billing";
 
 function refreshCrm() {
   ["/", "/leads", "/members", "/follow-ups", "/visits", "/payments", "/packages", "/lead-assistant"].forEach((path) => revalidatePath(path));
@@ -218,9 +219,15 @@ export async function setSubscriptionStatus(formData: FormData) {
   const id = z.string().min(1).parse(formData.get("id"));
   const status = z.enum(["active", "cancelled"]).parse(formData.get("status"));
   const db = getDb();
+  // Cancelling inside a price commitment is an early termination: record the
+  // penalty it owes, exactly as the Billing section's Terminate button does.
+  const committed = await db.priceOverride.findFirst({ where: { subscriptionId: id, commitmentMonths: { not: null } }, select: { id: true } });
+  if (status === "cancelled" && committed) {
+    await db.$transaction((tx) => terminateSubscription(tx, id, "CRM (Cancel subscription)", null));
+  }
   const sub = await db.subscription.update({
     where: { id },
-    data: { status, cancelledAt: status === "cancelled" ? new Date() : null },
+    data: { status, ...(committed && status === "cancelled" ? {} : { cancelledAt: status === "cancelled" ? new Date() : null }) },
     include: { package: true },
   });
   await db.interaction.create({ data: { leadId: sub.leadId, type: "note", content: `Subscription ${status === "cancelled" ? "cancelled" : "reactivated"}: ${subscriptionName(sub)}` } });
