@@ -1,7 +1,8 @@
 import { getDb } from "@/lib/db";
 import { ACTIVE_MEMBER_STATUSES } from "@/lib/constants";
 import type { MembershipPaymentInfo } from "@/lib/membership";
-import { getSubscriptionPaymentStatus, subscriptionName } from "@/lib/subscriptions";
+import { subscriptionName } from "@/lib/subscriptions";
+import { describeBilling } from "@/lib/billing";
 import { formatDate, formatRwf, leadDisplayName } from "@/lib/utils";
 
 /**
@@ -87,7 +88,9 @@ export async function findReminderCandidates(now = new Date()): Promise<{
     include: {
       lead: true,
       package: true,
-      payments: { orderBy: { paymentDate: "desc" }, take: 1 },
+      priceOverride: true,
+      termsAcceptances: { select: { termsVersion: true } },
+      payments: { orderBy: { paymentDate: "desc" }, select: { paymentDate: true, amount: true, packageId: true } },
     },
   });
 
@@ -96,9 +99,10 @@ export async function findReminderCandidates(now = new Date()): Promise<{
 
   for (const sub of subscriptions) {
     const member = sub.lead;
-    const latestPayment = sub.payments[0];
     const memberPackage = sub.package;
-    const info = getSubscriptionPaymentStatus(sub, latestPayment, now);
+    // A custom or Loyalty price replaces the plan price in the amount quoted.
+    const billing = describeBilling(sub, sub.payments, sub.termsAcceptances.map((a) => a.termsVersion), now);
+    const info = billing.info;
     if (!info) continue;
 
     const stage = stageFor(info, now);
@@ -124,7 +128,7 @@ export async function findReminderCandidates(now = new Date()): Promise<{
       stage,
       info,
       packageName: memberPackage?.name ?? null,
-      amountDue: info.dueAmount || memberPackage?.price || latestPayment?.amount || 0,
+      amountDue: info.dueAmount || billing.renewalAmount,
     });
   }
 

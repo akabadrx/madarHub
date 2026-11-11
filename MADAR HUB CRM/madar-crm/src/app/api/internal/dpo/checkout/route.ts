@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getDb } from "@/lib/db";
 import { isDpoLive } from "@/lib/dpo";
 import { startDpoCheckout } from "@/lib/dpo-checkout";
+import { portalCheckoutPrice } from "@/lib/billing";
 
 /**
  * POST /crm/api/internal/dpo/checkout
@@ -69,6 +70,11 @@ export async function POST(req: Request) {
       verifiedSubscriptionId = sub?.id ?? null;
     }
 
+    // The price comes from the member's records — a custom or Loyalty price
+    // included — never from the request.
+    const price = await portalCheckoutPrice(db, { leadId: verifiedLeadId, subscriptionId: verifiedSubscriptionId, pkg });
+    if ("error" in price) return NextResponse.json({ error: price.error }, { status: 403 });
+
     const result = await startDpoCheckout({
       pkg,
       customerName,
@@ -76,7 +82,8 @@ export async function POST(req: Request) {
       customerPhone,
       source: "membership",
       leadId: verifiedLeadId,
-      subscriptionId: verifiedSubscriptionId,
+      subscriptionId: price.subscriptionId,
+      saleAmount: price.saleAmount,
     });
 
     return NextResponse.json(result);

@@ -8,6 +8,12 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // A server action or API call without a session is refused outright: a
+  // redirect to the login page would read as success to a script.
+  if (request.headers.has("next-action") || request.nextUrl.pathname.startsWith("/api/")) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   // Redirect to login, remembering where the user was headed.
   const loginUrl = request.nextUrl.clone();
   loginUrl.pathname = "/login";

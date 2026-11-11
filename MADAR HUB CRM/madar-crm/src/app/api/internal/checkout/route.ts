@@ -3,7 +3,8 @@ import { randomBytes } from "crypto";
 import { z } from "zod";
 import { getDb } from "@/lib/db";
 import { submitOrderRequest } from "@/lib/pesapal";
-import { checkoutAmounts } from "@/lib/pricing";
+import { portalCheckoutPrice } from "@/lib/billing";
+import { addPesapalFee } from "@/lib/pricing";
 
 /**
  * POST /crm/api/internal/checkout
@@ -77,8 +78,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Online payment is not configured yet." }, { status: 503 });
     }
 
+    // The price comes from the member's records — a custom or Loyalty price
+    // included — never from the request.
+    const price = await portalCheckoutPrice(db, { leadId: verifiedLeadId, subscriptionId: verifiedSubscriptionId, pkg });
+    if ("error" in price) return NextResponse.json({ error: price.error }, { status: 403 });
+
     const merchantReference = `MHM-${Date.now()}-${randomBytes(3).toString("hex")}`;
-    const { amount, chargedAmount } = checkoutAmounts(pkg.price);
+    const amount = price.saleAmount;
+    const chargedAmount = addPesapalFee(amount);
 
     await db.pesapalPayment.create({
       data: {
@@ -94,7 +101,7 @@ export async function POST(req: Request) {
         status: "PENDING",
         source: "membership",
         leadId: verifiedLeadId,
-        subscriptionId: verifiedSubscriptionId,
+        subscriptionId: price.subscriptionId,
       },
     });
 

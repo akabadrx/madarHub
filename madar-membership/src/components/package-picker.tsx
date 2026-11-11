@@ -10,7 +10,7 @@ import {
 } from "@/app/checkout-actions";
 import { PACKAGE_COPY, PACKAGE_ORDER } from "@/lib/package-copy";
 import { MOMO_MERCHANT_NAME, MOMO_USSD, WHATSAPP_NUMBER, WHATSAPP_URL } from "@/lib/site";
-import { checkoutAmounts, dpoCheckoutAmounts, momoCheckoutAmounts, saleAmountWithVat } from "@/lib/pricing";
+import { addPesapalFee, dpoCheckoutAmounts, momoCheckoutAmounts, saleAmountWithVat } from "@/lib/pricing";
 import { formatRwf } from "@/lib/utils";
 
 const initialState: CheckoutState = {};
@@ -154,6 +154,7 @@ export function PackagePicker({
   packages,
   currentSlug,
   currentSubscriptionId = null,
+  currentSaleAmount = null,
   momoAvailable = false,
   dpoAvailable = false,
 }: {
@@ -161,6 +162,8 @@ export function PackagePicker({
   currentSlug?: string | null;
   /** The subscription the "Your plan" card renews, so its payment lands on it. */
   currentSubscriptionId?: string | null;
+  /** The member's custom or Loyalty monthly price (VAT inclusive) for the "Your plan" card. */
+  currentSaleAmount?: number | null;
   /** False while the CRM's MoMo credentials are missing or still on sandbox. */
   momoAvailable?: boolean;
   /** False while the CRM's DPO account is missing or still in test mode. */
@@ -202,10 +205,15 @@ export function PackagePicker({
           const busy = submitting === pkg.slug;
           // The CRM stores every price VAT-exclusive; a plan sold at an all-in
           // price shows that figure, which is what checkout charges on MoMo.
-          const headlinePrice = copy?.vatInclusive ? saleAmountWithVat(pkg.price) : pkg.price;
-          const cadence = copy?.vatInclusive
-            ? (CADENCE_VAT_INCLUSIVE[pkg.billingType] ?? "RWF, VAT inclusive")
-            : (CADENCE[pkg.billingType] ?? "RWF + VAT");
+          // A member on a custom price sees, and is charged, that price on their own plan.
+          const custom = isCurrent && currentSaleAmount ? currentSaleAmount : null;
+          const headlinePrice = custom ?? (copy?.vatInclusive ? saleAmountWithVat(pkg.price) : pkg.price);
+          const cadence = custom
+            ? "RWF / month, VAT inclusive"
+            : copy?.vatInclusive
+              ? (CADENCE_VAT_INCLUSIVE[pkg.billingType] ?? "RWF, VAT inclusive")
+              : (CADENCE[pkg.billingType] ?? "RWF + VAT");
+          const sale = custom ?? saleAmountWithVat(pkg.price);
           const whatsapp = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
             `Hello Madar Hub, I want to subscribe to ${pkg.name}`,
           )}`;
@@ -226,7 +234,7 @@ export function PackagePicker({
                 <div className="price">
                   {headlinePrice.toLocaleString("en-RW")} <span>{cadence}</span>
                 </div>
-                {copy?.priceNote ? <span className="capacity">{copy.priceNote}</span> : null}
+                {custom ? <span className="capacity">Your custom rate</span> : copy?.priceNote ? <span className="capacity">{copy.priceNote}</span> : null}
                 {copy?.capacity ? <span className="capacity">{copy.capacity}</span> : null}
               </div>
 
@@ -332,15 +340,15 @@ export function PackagePicker({
                 {momoAvailable || dpoAvailable ? (
                   <>
                     {momoAvailable ? (
-                      <>{formatRwf(momoCheckoutAmounts(pkg.price).chargedAmount)} on MoMo &middot; </>
+                      <>{formatRwf(custom ?? momoCheckoutAmounts(pkg.price).chargedAmount)} on MoMo &middot; </>
                     ) : null}
                     {dpoAvailable ? (
-                      <>{formatRwf(dpoCheckoutAmounts(pkg.price).chargedAmount)} with DPO &middot; </>
+                      <>{formatRwf(custom ?? dpoCheckoutAmounts(pkg.price).chargedAmount)} with DPO &middot; </>
                     ) : null}
-                    {formatRwf(checkoutAmounts(pkg.price).chargedAmount)} by card
+                    {formatRwf(addPesapalFee(sale))} by card
                   </>
                 ) : (
-                  <>{formatRwf(checkoutAmounts(pkg.price).chargedAmount)} charged at checkout</>
+                  <>{formatRwf(addPesapalFee(sale))} charged at checkout</>
                 )}
               </p>
             </article>
